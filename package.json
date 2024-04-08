@@ -3,14 +3,23 @@
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "npx @biomejs/biome check ./app ./components ./utils --apply"
   },
   "dependencies": {
+    "@fluentui/react-components": "^9.47.3",
+    "@tippyjs/react": "^4.2.6",
+    "jotai": "^2.7.2",
+    "js-sha512": "^0.9.0",
+    "lodash": "^4.17.21",
     "next": "latest",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tippy.js": "^6.3.7"
   },
   "devDependencies": {
+    "@biomejs/biome": "1.6.4",
+    "@types/lodash": "^4.17.0",
     "@types/node": "20.8.10",
     "@types/react": "18.2.33",
     "@types/react-dom": "18.2.14",
