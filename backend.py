@@ -166,4 +166,3 @@ async def post_selections(task_index: int, selection: Selection):
                 "to_doc": selection.from_summary,
             })
     return selections
-

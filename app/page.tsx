@@ -230,6 +230,9 @@ export default function Index() {
             onClick={() => {
               setRange(null)
               setRangeId(null)
+              setWaitting(null)
+              setServerSelection(null)
+              window.getSelection()?.removeAllRanges()
             }}
           >
             Wash Hand
