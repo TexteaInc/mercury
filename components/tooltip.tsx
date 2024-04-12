@@ -38,7 +38,7 @@ const Tooltip = (props: {
   const role = useRole(context, {
     role: "dialog",
   })
-  const clientPoint = useClientPoint(context, { axis: "x" })
+  const clientPoint = useClientPoint(context, { axis: "x", enabled: !isOpen })
   const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, dismiss, role, clientPoint])
   return (
     <>
