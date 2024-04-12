@@ -1,10 +1,10 @@
-import type { LabelRequest, Normal, SectionResponse, SelectionRequest, Task, Tasks } from "./types"
+import type { AllTasksLength, LabelRequest, Normal, SectionResponse, SelectionRequest, Task } from "./types"
 
-const getAllTasks = (backend: string): Promise<Tasks> => {
+const getAllTasksLength = (backend: string): Promise<AllTasksLength> => {
   return fetch(`${backend}/`)
     .then(response => response.json())
     .then(data => {
-      return data as Tasks
+      return data as AllTasksLength
     })
 }
 
@@ -44,4 +44,4 @@ const labelText = (backend: string, taskIndex: number, req: LabelRequest): Promi
     })
 }
 
-export { getAllTasks, getSingleTask, selectText, labelText }
+export { getAllTasksLength, getSingleTask, selectText, labelText }

@@ -3,7 +3,9 @@ export type Task = {
   sum: string
 }
 
-export type Tasks = Task[]
+export type AllTasksLength = {
+  all: number
+}
 
 export type LabelRequest = {
   sup: number

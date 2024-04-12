@@ -5,22 +5,20 @@ import {
   Button,
   Card,
   CardHeader,
+  Field,
   FluentProvider,
   ProgressBar,
   Text,
   Title1,
-  Title3,
   webLightTheme,
 } from "@fluentui/react-components"
-import Tippy from '@tippyjs/react';
-import 'tippy.js/dist/tippy.css'; // optional
 import { useAtom } from "jotai"
 import { atomWithStorage } from "jotai/utils"
 import _ from "lodash"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
-import { getAllTasks, getSingleTask, labelText, selectText } from "../utils/request"
+import Tooltip from "../components/tooltip"
+import { getAllTasksLength, getSingleTask, labelText, selectText } from "../utils/request"
 import type { SectionResponse, Task } from "../utils/types"
-import { followCursor } from "tippy.js"
 
 const labelIndexAtom = atomWithStorage("labelIndex", 0)
 const backend = "http://127.0.0.1:8000"
@@ -60,8 +58,8 @@ export default function Index() {
 
   useEffect(() => {
     if (getLock.current) return
-    getAllTasks(backend).then(tasks => {
-      setMaxIndex(tasks.length)
+    getAllTasksLength(backend).then(tasks => {
+      setMaxIndex(tasks.all)
       getLock.current = true
     })
   }, [])
@@ -78,7 +76,7 @@ export default function Index() {
         console.error(error)
       })
   }, [labelIndex])
-  
+
   useLayoutEffect(() => {
     document.body.addEventListener("mouseup", () => {
       const selection = window.getSelection()
@@ -92,7 +90,10 @@ export default function Index() {
         setRangeId(null)
         return
       }
-      if (!selection.containsNode(document.getElementById("summary"), true) && !selection.containsNode(document.getElementById("doc"), true)) {
+      if (
+        !selection.containsNode(document.getElementById("summary"), true) &&
+        !selection.containsNode(document.getElementById("doc"), true)
+      ) {
         setRange(null)
         setRangeId(null)
         return
@@ -148,56 +149,31 @@ export default function Index() {
                     ? "#38bdf8"
                     : "#0ea5e9"
           return isBackendSlice ? (
-            <Tippy
-              followCursor="initial"
-              interactive={true}
-              plugins={[followCursor]}
-              content={(
-                <div style={{ userSelect: "none", zIndex: 10 }} tabIndex={-1}>
-                  <Title3>Score: {score}</Title3>
-                  <div>Do the two texts match</div>
-                  <div>
-                    <Button
-                      style={{ marginRight: ".5rem" }}
-                      onClick={() => {
-                        if (range === null || rangeId === null) return
-                        labelText(backend, labelIndex, {
-                          sup: rangeId === "summary" ? slice[0] : range[0],
-                          sbottom: rangeId === "summary" ? slice[1] : range[1],
-                          dup: rangeId === "summary" ? range[0] : slice[0],
-                          dbottom: rangeId === "summary" ? range[1] : slice[1],
-                          correct: true,
-                        }).then(() => {
-                          console.log("Labelled as correct")
-                        })
-                      }}
-                    >
-                      Yes
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        if (range === null || rangeId === null) return
-                        labelText(backend, labelIndex, {
-                          sup: rangeId === "summary" ? slice[0] : range[0],
-                          sbottom: rangeId === "summary" ? slice[1] : range[1],
-                          dup: rangeId === "summary" ? range[0] : slice[0],
-                          dbottom: rangeId === "summary" ? range[1] : slice[1],
-                          correct: false,
-                        }).then(() => {
-                          console.log("Labelled as incorrect")
-                        })
-                      }}
-                    >
-                      No
-                    </Button>
-                  </div>
-                </div>
-              )}
-            >
-              <Text as="span" style={{ backgroundColor: color, userSelect: "none" }}>
-                {props.text.slice(slice[0], slice[1] + 1)}
-              </Text>
-            </Tippy>
+            <Tooltip
+              backgroundColor={color}
+              text={props.text.slice(slice[0], slice[1] + 1)}
+              score={score}
+              onYes={() => {
+                if (range === null || rangeId === null) return Promise.resolve()
+                return labelText(backend, labelIndex, {
+                  sup: rangeId === "summary" ? slice[0] : range[0],
+                  sbottom: rangeId === "summary" ? slice[1] : range[1],
+                  dup: rangeId === "summary" ? range[0] : slice[0],
+                  dbottom: rangeId === "summary" ? range[1] : slice[1],
+                  correct: true,
+                }).then(() => {})
+              }}
+              onNo={() => {
+                if (range === null || rangeId === null) return Promise.resolve()
+                return labelText(backend, labelIndex, {
+                  sup: rangeId === "summary" ? slice[0] : range[0],
+                  sbottom: rangeId === "summary" ? slice[1] : range[1],
+                  dup: rangeId === "summary" ? range[0] : slice[0],
+                  dbottom: rangeId === "summary" ? range[1] : slice[1],
+                  correct: false,
+                }).then(() => {})
+              }}
+            />
           ) : (
             <Text as="span">{props.text.slice(slice[0], slice[1] + 1)}</Text>
           )
@@ -245,7 +221,9 @@ export default function Index() {
         <FluentProvider theme={webLightTheme}>
           <Title1>Mercury Label</Title1>
           <br />
-          <ProgressBar value={labelIndex} max={maxIndex} thickness="large" />
+          <Field validationMessage={`${labelIndex + 1} / ${maxIndex}`} validationState="none">
+            <ProgressBar value={labelIndex} max={maxIndex} thickness="large" />
+          </Field>
           <br />
           <Button
             onClick={() => {
@@ -270,6 +248,9 @@ export default function Index() {
               onClick={() => {
                 setRange(null)
                 setRangeId(null)
+                setWaitting(null)
+                setServerSelection(null)
+                window.getSelection()?.removeAllRanges()
                 setLabelIndex(labelIndex - 1)
               }}
             >
@@ -280,6 +261,9 @@ export default function Index() {
               onClick={() => {
                 setRange(null)
                 setRangeId(null)
+                setWaitting(null)
+                setServerSelection(null)
+                window.getSelection()?.removeAllRanges()
                 setLabelIndex(labelIndex + 1)
               }}
             >
@@ -302,6 +286,34 @@ export default function Index() {
                 style={{
                   flex: 1,
                   marginRight: "1em",
+                  userSelect: waitting === "doc" ? "none" : "auto",
+                }}
+              >
+                <CardHeader
+                  header={
+                    <Body1>
+                      <strong>Doc</strong>
+                    </Body1>
+                  }
+                />
+                <Text
+                  id="doc"
+                  as="span"
+                  onMouseUp={event => {
+                    checkSelection(event.target as HTMLSpanElement)
+                  }}
+                >
+                  {serverSelection !== null && serverSelection.length > 0 && rangeId === "summary" ? (
+                    <SliceText text={currentTask.doc} slices={serverSelection} />
+                  ) : (
+                    currentTask.doc
+                  )}
+                </Text>
+              </Card>
+              <Card
+                style={{
+                  flex: 1,
+                  marginLeft: "1em",
                   userSelect: waitting === "summary" ? "none" : "auto",
                 }}
               >
@@ -320,37 +332,9 @@ export default function Index() {
                   }}
                 >
                   {serverSelection !== null && rangeId === "doc" ? (
-                    <SliceText text={currentTask.sum} slices={serverSelection} />
+                    <SliceText text={currentTask.sum} slices={structuredClone(serverSelection)} />
                   ) : (
                     currentTask.sum
-                  )}
-                </Text>
-              </Card>
-              <Card
-                style={{
-                  flex: 1,
-                  marginLeft: "1em",
-                  userSelect: waitting === "doc" ? "none" : "auto",
-                }}
-              >
-                <CardHeader
-                  header={
-                    <Body1>
-                      <strong>Doc</strong>
-                    </Body1>
-                  }
-                />
-                <Text
-                  id="doc"
-                  as="span"
-                  onMouseUp={event => {
-                    checkSelection(event.target as HTMLSpanElement)
-                  }}
-                >
-                  {serverSelection !== null && rangeId === "summary" ? (
-                    <SliceText text={currentTask.doc} slices={serverSelection} />
-                  ) : (
-                    currentTask.doc
                   )}
                 </Text>
               </Card>
