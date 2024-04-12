@@ -4,6 +4,7 @@ import {
   offset,
   safePolygon,
   shift,
+  useClientPoint,
   useDismiss,
   useFloating,
   useFocus,
@@ -37,7 +38,8 @@ const Tooltip = (props: {
   const role = useRole(context, {
     role: "dialog",
   })
-  const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, dismiss, role])
+  const clientPoint = useClientPoint(context, { axis: "x" })
+  const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, dismiss, role, clientPoint])
   return (
     <>
       <Text

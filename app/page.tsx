@@ -24,6 +24,7 @@ const labelIndexAtom = atomWithStorage("labelIndex", 0)
 const backend = "http://127.0.0.1:8000"
 
 const updateSliceArray = (text: string, slices: SectionResponse): [number, number, boolean, number][] => {
+  if (slices.length === 0) return [[0, text.length - 1, false, 0] as [number, number, boolean, number]]
   const sliceArray: [number, number, boolean, number][] = slices.map(slice => {
     return [slice.offset, slice.offset + slice.len - 1, true, slice.score]
   })
