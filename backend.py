@@ -57,7 +57,7 @@ app.add_middleware(
 
 VECTARA_CUSTOMER_ID = int(os.environ.get("VECTARA_CUSTOMER_ID"))
 VECTARA_API_KEY = os.environ.get("VECTARA_API_KEY")
-VECTARA_CORPUS_ID = 5
+VECTARA_CORPUS_ID = int(os.environ.get("VECTARA_CORPUS_ID"))
 
 tasks = load_ragtruth()
 
