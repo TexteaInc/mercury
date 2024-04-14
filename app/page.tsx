@@ -185,7 +185,7 @@ export default function Index() {
         const isUserSelectionHeadIncludeResponse = props.user[0] < range[1]
         const isUserSelectionTailIncludeResponse = props.user[1] > range[0]
         if (isSame) {
-          updatedSlices.push(userSectionResponse(props.user[0], props.user[1], rangeId === "summary"))
+          // do nothing
         } else if (isResponseFullIncludeUserSelection) {
           const selection = newSlices[i]
           const head: SectionResponseSlice = {
@@ -222,6 +222,8 @@ export default function Index() {
             to_doc: selection.to_doc,
           }
           updatedSlices.push(responseRemoveUserSelectionTail)
+        } else {
+          updatedSlices.push(newSlices[i])
         }
       }
       updatedSlices.push(userSectionResponse(props.user[0], props.user[1], rangeId === "summary"))
