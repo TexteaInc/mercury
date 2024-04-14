@@ -46,7 +46,6 @@ const Tooltip = (props: {
         as="span"
         style={{
           backgroundColor: props.backgroundColor,
-          userSelect: "none",
         }}
         ref={refs.setReference}
         {...getReferenceProps()}
@@ -67,7 +66,7 @@ const Tooltip = (props: {
           }}
           {...getFloatingProps()}
         >
-          <Title3>Score: {props.score}</Title3>
+          {props.score <= 1 ? <Title3>Score: {props.score}</Title3> : <Title3>User select</Title3>}
           <br />
           <Text as="p">Do the two texts metch</Text>
           <br />

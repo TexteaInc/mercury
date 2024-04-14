@@ -30,6 +30,15 @@ export type SectionResponseSlice = {
 
 export type SectionResponse = SectionResponseSlice[]
 
+export function userSectionResponse(start: number, end: number, toDoc: boolean): SectionResponseSlice {
+  return {
+    score: 2,
+    offset: start,
+    len: end - start,
+    to_doc: toDoc,
+  }
+}
+
 export type Error = {
   error: string
 }
