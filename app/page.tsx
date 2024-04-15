@@ -22,7 +22,6 @@ import { getAllTasksLength, getSingleTask, labelText, selectText } from "../util
 import { type SectionResponse, type SectionResponseSlice, type Task, userSectionResponse } from "../utils/types"
 
 const labelIndexAtom = atomWithStorage("labelIndex", 0)
-const backend = "http://127.0.0.1:8000"
 
 enum Stage {
   None = 0,
@@ -70,14 +69,14 @@ export default function Index() {
 
   useEffect(() => {
     if (getLock.current) return
-    getAllTasksLength(backend).then(tasks => {
+    getAllTasksLength().then(tasks => {
       setMaxIndex(tasks.all)
       getLock.current = true
     })
   }, [])
 
   useEffect(() => {
-    getSingleTask(backend, labelIndex)
+    getSingleTask(labelIndex)
       .then(task => {
         if ("doc" in task) {
           setCurrentTask(task)
@@ -117,7 +116,7 @@ export default function Index() {
     _.debounce(() => {
       if (DISBALE_QUERY) return
       setWaitting(rangeId === "summary" ? "doc" : "summary")
-      selectText(backend, labelIndex, {
+      selectText(labelIndex, {
         up: firstRange[0],
         bottom: firstRange[1],
         from_summary: rangeId === "summary",
@@ -257,7 +256,7 @@ export default function Index() {
               score={score}
               onYes={() => {
                 if (firstRange === null || rangeId === null) return Promise.resolve()
-                return labelText(backend, labelIndex, {
+                return labelText(labelIndex, {
                   sup: rangeId === "summary" ? slice[0] : firstRange[0],
                   sbottom: rangeId === "summary" ? slice[1] : firstRange[1],
                   dup: rangeId === "summary" ? firstRange[0] : slice[0],
@@ -267,7 +266,7 @@ export default function Index() {
               }}
               onNo={() => {
                 if (firstRange === null || rangeId === null) return Promise.resolve()
-                return labelText(backend, labelIndex, {
+                return labelText(labelIndex, {
                   sup: rangeId === "summary" ? slice[0] : firstRange[0],
                   sbottom: rangeId === "summary" ? slice[1] : firstRange[1],
                   dup: rangeId === "summary" ? firstRange[0] : slice[0],

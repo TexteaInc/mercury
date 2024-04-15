@@ -1,23 +1,23 @@
 import type { AllTasksLength, LabelRequest, Normal, SectionResponse, SelectionRequest, Task } from "./types"
 
-const getAllTasksLength = (backend: string): Promise<AllTasksLength> => {
-  return fetch(`${backend}/`)
+const getAllTasksLength = (): Promise<AllTasksLength> => {
+  return fetch("/task")
     .then(response => response.json())
     .then(data => {
       return data as AllTasksLength
     })
 }
 
-const getSingleTask = (backend: string, taskIndex: number): Promise<Task | Error> => {
-  return fetch(`${backend}/${taskIndex}`)
+const getSingleTask = (taskIndex: number): Promise<Task | Error> => {
+  return fetch(`/task/${taskIndex}`)
     .then(response => response.json())
     .then(data => {
       return data as Task | Error
     })
 }
 
-const selectText = (backend: string, taskIndex: number, req: SelectionRequest): Promise<SectionResponse | Error> => {
-  return fetch(`${backend}/${taskIndex}/select`, {
+const selectText = (taskIndex: number, req: SelectionRequest): Promise<SectionResponse | Error> => {
+  return fetch(`/task/${taskIndex}/select`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -30,8 +30,8 @@ const selectText = (backend: string, taskIndex: number, req: SelectionRequest): 
     })
 }
 
-const labelText = (backend: string, taskIndex: number, req: LabelRequest): Promise<Normal> => {
-  return fetch(`${backend}/${taskIndex}`, {
+const labelText = (taskIndex: number, req: LabelRequest): Promise<Normal> => {
+  return fetch(`/task/${taskIndex}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

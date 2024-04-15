@@ -41,3 +41,5 @@ next-env.d.ts
 __pycache__
 
 dist
+
+config.json

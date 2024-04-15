@@ -1,10 +1,44 @@
+from rich.console import Console
+import subprocess
+import os
+from dotenv import load_dotenv
+import uvicorn
+
+load_dotenv()
+console = Console()
+
+has_dist = os.path.exists("dist")
+if os.environ.get("FORCE_REBUILD", None):
+    has_dist = False
+
+if not has_dist:
+    try:
+        subprocess.run(["pnpm", "--version"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        console.print("Installing pnpm...", style="bold yellow")
+        try:
+            subprocess.run(["npm", "install", "-g", "pnpm"], check=True)
+        except subprocess.CalledProcessError:
+            console.print("Failed to install pnpm", style="bold red")
+            exit(1)
+        except FileNotFoundError:
+            console.print("You need install npm first", style="bold red")
+            exit(1)
+
+    # build frontend
+    console.print("Building frontend...", style="bold yellow")
+    subprocess.run(["pnpm", "install"], check=True)
+    subprocess.run(["pnpm", "build"], check=True)
+else:
+    console.print("Frontend already built", style="bold yellow")
+
+# ======================== Backend ========================
 from fastapi import FastAPI
 from pydantic import BaseModel
+from fastapi.staticfiles import StaticFiles
 import requests
 import io
 import json
-from fastapi.middleware.cors import CORSMiddleware
-import os
 import jsonlines
 
 with open("./config.json", "r") as f:
@@ -37,24 +71,6 @@ def load_ragtruth():
 
 app = FastAPI()
 
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:3000",
-    "http://127.0.0.1",
-    "http://127.0.0.1:8080",
-    "http://127.0.0.1:3000"
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 VECTARA_CUSTOMER_ID = int(os.environ.get("VECTARA_CUSTOMER_ID"))
 VECTARA_API_KEY = os.environ.get("VECTARA_API_KEY")
 VECTARA_CORPUS_ID = int(os.environ.get("VECTARA_CORPUS_ID"))
@@ -73,11 +89,11 @@ class Selection(BaseModel):
     bottom: int
     from_summary: bool
 
-@app.get("/")
+@app.get("/task")
 async def get_tasks_length():
     return { "all": len(tasks) }
 
-@app.get("/{task_index}")
+@app.get("/task/{task_index}")
 async def get_task(task_index: int = 0):
     if task_index >= len(tasks):
         return {
@@ -87,14 +103,14 @@ async def get_task(task_index: int = 0):
 
 now_task_index = -1
 
-@app.post("/{task_index}")
+@app.post("/task/{task_index}")
 async def post_task(task_index: int, label: Label):
     print(label)
     return {
         "message": "success"
     }
     
-@app.post("/{task_index}/select")
+@app.post("/task/{task_index}/select")
 async def post_selections(task_index: int, selection: Selection):
     global now_task_index
     if task_index >= len(tasks):
@@ -166,3 +182,8 @@ async def post_selections(task_index: int, selection: Selection):
                 "to_doc": selection.from_summary,
             })
     return selections
+
+app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
+
+if __name__ == "__main__":
+    uvicorn.run(app, port=8000)
