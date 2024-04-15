@@ -1,6 +1,6 @@
 # Mercury
 
-> [NOTE]
+> [!NOTE]
 > WIP: This project is under active development
 
 An interface for data labeling, where the user can select two pieces of text from the article and summary, respectively, to label whether they match or not.
@@ -11,7 +11,7 @@ We currently use Vectara for highlighting, where the backend can help highlight 
 
 ## Usage
 
-> [NOTE]
+> [!NOTE]
 > You need Python and Node.js.
 
 As mentioned before, we use Vectara, you need to set the following environment variables first:
