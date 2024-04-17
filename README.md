@@ -30,4 +30,5 @@ And create a config file called `config.json`, copy `config.example.json`, fill 
 Once everything is complete, you can start Mercury by following these steps:
 
 1. `pip3 install -r requirements.txt`
-2. `python3 server.py` (if you want to rebuild frontend: `FORCE_REBUILD=1 python3 server.py`)
+2. `pnpm install && pnpm build` (if you don't have `pnpm` installed: `npm install -g pnpm`)
+3. `python3 server.py`

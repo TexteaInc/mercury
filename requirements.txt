@@ -1,6 +1,5 @@
 fastapi
 requests
 jsonlines
-rich
 python-dotenv
 uvicorn

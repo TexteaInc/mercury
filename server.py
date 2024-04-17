@@ -1,38 +1,6 @@
-from rich.console import Console
-import subprocess
 import os
 from dotenv import load_dotenv
 import uvicorn
-
-load_dotenv()
-console = Console()
-
-has_dist = os.path.exists("dist")
-if os.environ.get("FORCE_REBUILD", None):
-    has_dist = False
-
-if not has_dist:
-    try:
-        subprocess.run(["pnpm", "--version"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except FileNotFoundError:
-        console.print("Installing pnpm...", style="bold yellow")
-        try:
-            subprocess.run(["npm", "install", "-g", "pnpm"], check=True)
-        except subprocess.CalledProcessError:
-            console.print("Failed to install pnpm", style="bold red")
-            exit(1)
-        except FileNotFoundError:
-            console.print("You need install npm first", style="bold red")
-            exit(1)
-
-    # build frontend
-    console.print("Building frontend...", style="bold yellow")
-    subprocess.run(["pnpm", "install"], check=True)
-    subprocess.run(["pnpm", "build"], check=True)
-else:
-    console.print("Frontend already built", style="bold yellow")
-
-# ======================== Backend ========================
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
@@ -40,6 +8,8 @@ import requests
 import io
 import json
 import jsonlines
+
+load_dotenv()
 
 with open("./config.json", "r") as f:
     config = json.load(f)
