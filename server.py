@@ -76,23 +76,21 @@ async def post_selections(task_index: int, selection: Selection):
         return_summary=False,
     )
     selections = []
-    documentIndex = 0 if selection.from_summary else 1
     for i in response["responseSet"][0]["response"]:
-        if documentIndex == i["documentIndex"]:
-            score = i["score"]
-            offset = -1
-            length = -1
-            for j in i["metadata"]:
-                if j["name"] == "offset":
-                    offset = int(j["value"])
-                if j["name"] == "len":
-                    length = int(j["value"])
-            selections.append({
-                "score": score,
-                "offset": offset,
-                "len": length,
-                "to_doc": selection.from_summary,
-            })
+        score = i["score"]
+        offset = -1
+        length = -1
+        for j in i["metadata"]:
+            if j["name"] == "offset":
+                offset = int(j["value"])
+            if j["name"] == "len":
+                length = int(j["value"])
+        selections.append({
+            "score": score,
+            "offset": offset,
+            "len": length,
+            "to_doc": selection.from_summary,
+        })
     return selections
 
 app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
