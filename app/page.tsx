@@ -413,7 +413,7 @@ export default function Index() {
               flex: 1,
               marginLeft: "1em",
               userSelect: waitting === "summary" ? "none" : "auto",
-              color: waitting === "doc" ? "gray" : "black",
+              color: waitting === "summary" ? "gray" : "black",
             }}
           >
             <CardHeader

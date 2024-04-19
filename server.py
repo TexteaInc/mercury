@@ -1,51 +1,21 @@
-import os
 from dotenv import load_dotenv
 import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
-import requests
-import io
-import json
-import jsonlines
+import vectara
+from ingester import read_file_into_corpus
 
 load_dotenv()
 
-with open("./config.json", "r") as f:
-    config = json.load(f)
 
-DATASET_PATH = config["dataset"]
-
-def load_jsonl(path):
-    data = []
-    with open(path, "r+", encoding="utf-8") as f:
-        for item in jsonlines.Reader(f):
-            data.append(item)
-    return data
-
-def load_ragtruth():
-    response = load_jsonl(os.path.join(DATASET_PATH, "response.jsonl"))
-    source_info = load_jsonl(os.path.join(DATASET_PATH, "source_info.jsonl"))
-    source_info = { item["source_id"]:item for item in source_info }
-    
-    data = []
-    for line in response:
-        source = source_info[line["source_id"]]
-        if source["task_type"] != "Summary":
-            continue
-        data.append({
-            "doc": source["source_info"],
-            "sum": line["response"],
-        })
-    return data
 
 app = FastAPI()
+client = vectara.vectara()
 
-VECTARA_CUSTOMER_ID = int(os.environ.get("VECTARA_CUSTOMER_ID"))
-VECTARA_API_KEY = os.environ.get("VECTARA_API_KEY")
-VECTARA_CORPUS_ID = int(os.environ.get("VECTARA_CORPUS_ID"))
+# VECTARA_CORPUS_ID = int(os.environ.get("VECTARA_CORPUS_ID"))
 
-tasks = load_ragtruth()
+source_id, summary_id, tasks = read_file_into_corpus()
 
 class Label(BaseModel):
     sup: int
@@ -69,7 +39,11 @@ async def get_task(task_index: int = 0):
         return {
             "error": "Invalid task index"
         }
-    return tasks[task_index]
+    task = tasks[task_index]
+    return {
+        "doc": task["source"],
+        "sum": task["summary"]
+    }
 
 now_task_index = -1
 
@@ -82,7 +56,6 @@ async def post_task(task_index: int, label: Label):
     
 @app.post("/task/{task_index}/select")
 async def post_selections(task_index: int, selection: Selection):
-    global now_task_index
     if task_index >= len(tasks):
         return {
             "error": "Invalid task index"
@@ -91,51 +64,20 @@ async def post_selections(task_index: int, selection: Selection):
         return {
             "error": "Invalid task index"
         }
-    if task_index != now_task_index:
-        requests.post("https://api.vectara.io/v1/reset-corpus", data={
-            "customer_id": VECTARA_CUSTOMER_ID,
-            "corpus_id": VECTARA_CORPUS_ID,
-        }, headers={
-            "x-api-key": VECTARA_API_KEY,
-            "customer-id": str(VECTARA_CUSTOMER_ID),
-        })
-        requests.post(f"https://api.vectara.io/v1/upload?c={VECTARA_CUSTOMER_ID}&o={VECTARA_CORPUS_ID}",
-            headers={
-                "x-api-key": VECTARA_API_KEY,
-                "customer-id": str(VECTARA_CUSTOMER_ID),
-            }, files=[
-                ("file", ("doc", io.BytesIO(tasks[task_index]["doc"].encode("utf-8")), "application/octet-stream"))
-            ])
-        requests.post(f"https://api.vectara.io/v1/upload?c={VECTARA_CUSTOMER_ID}&o={VECTARA_CORPUS_ID}",
-            headers={
-                "x-api-key": VECTARA_API_KEY,
-                "customer-id": str(VECTARA_CUSTOMER_ID),
-            }, files=[
-                ("file", ("sum", io.BytesIO(tasks[task_index]["sum"].encode("utf-8")), "application/octet-stream"))
-            ])
-        now_task_index = task_index
-    query = tasks[task_index]["doc"][selection.up:selection.bottom] if not selection.from_summary else tasks[task_index]["sum"][selection.up:selection.bottom]
-    response = requests.post("https://api.vectara.io/v1/query", headers={
-        "customer-id": str(VECTARA_CUSTOMER_ID),
-        "x-api-key": VECTARA_API_KEY,
-    }, data=json.dumps(
-        {
-            "query": [
-                {
-                    "query": query,
-                    "numResults": 5,
-                    "corpusKey": [
-                        {
-                            "corpusId": VECTARA_CORPUS_ID,
-                        }
-                    ]
-                }
-            ]
-        }
-    ))
+    use_id = source_id if not selection.from_summary else summary_id
+    query = tasks[task_index]["source"][selection.up:selection.bottom] if not selection.from_summary else tasks[task_index]["summary"][selection.up:selection.bottom]
+    id_ = tasks[task_index]["_id"]
+    response = client.query(
+        corpus_id=use_id,
+        query=query,
+        top_k=5,
+        lang="auto",
+        metadata_filter=f"doc.id = '{id_}'",
+        return_summary=False,
+    )
     selections = []
     documentIndex = 0 if selection.from_summary else 1
-    for i in response.json()["responseSet"][0]["response"]:
+    for i in response["responseSet"][0]["response"]:
         if documentIndex == i["documentIndex"]:
             score = i["score"]
             offset = -1

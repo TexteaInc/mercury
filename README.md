@@ -20,12 +20,10 @@ As mentioned before, we use Vectara, you need to set the following environment v
 
     ![ID](.github/id.png)
 
-- `VECTARA_CORPUS_ID`: You need create a corpus first, this can be copied in the corpus details page.
 - `VECTARA_API_KEY`: You need create a personal api key ([click here](https://console.vectara.com/console/apiAccess/personalApiKey)), and copy it.
+- `MERCURY_FILE`: A CSV, JSON, or JSONL file containing at least two columns namely "source" and "summary".
 
 You can also write the above environment variables to `.env`.
-
-And create a config file called `config.json`, copy `config.example.json`, fill your own RAGTruth repo path.
 
 Once everything is complete, you can start Mercury by following these steps:
 

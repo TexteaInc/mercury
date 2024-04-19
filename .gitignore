@@ -43,3 +43,8 @@ __pycache__
 dist
 
 config.json
+
+.vscode
+feedback.db
+dump_small.py
+.env

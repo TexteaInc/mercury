@@ -3,3 +3,4 @@ requests
 jsonlines
 python-dotenv
 uvicorn
+pandas
