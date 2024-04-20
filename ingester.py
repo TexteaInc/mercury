@@ -13,6 +13,13 @@ class Schema(TypedDict):
     _id: int
     source: str
     summary: str
+    source_offsets: list[int]
+    summary_offsets: list[int]
+    
+# class SectionSlice(TypedDict):
+#     _id: int
+#     offset: int
+#     text: str
 
 load_dotenv()
 
@@ -45,6 +52,30 @@ class Ingester:
         self.client.reset_corpus(source_id)
         self.client.reset_corpus(summary_id)
     
+    # def split_text_into_sections(self, text: str) -> list[SectionSlice]:
+    #     section = []
+    #     offset = 0
+    #     for index, item in enumerate(text.split(".")):
+    #         section.append({
+    #             "_id": index + 1,
+    #             "offset": offset,
+    #             "text": item
+    #         })
+    #         offset += len(item) + 1
+    #     return section
+    
+    def split_text_into_sections(self, text: str) -> tuple[list[int], list[int], list[str]]:
+        ids = []
+        offsets = []
+        strs = []
+        offset = 0
+        for index, item in enumerate(text.split(".")):
+            ids.append(index + 1)
+            offsets.append(offset)
+            strs.append(item)
+            offset += len(item) + 1
+        return ids, offsets, strs
+    
     def read_jsonl_into_corpus(self) -> tuple[int, int, list[Schema]]:
         source_id, summary_id = self.create_corpus()
         schemas = []
@@ -53,22 +84,28 @@ class Ingester:
                 source = item["source"]
                 summary = item["summary"]
                 id_ = f"mercury_{index}"
-                self.client.upload_chunk(
+                ids, source_offsets, strs = self.split_text_into_sections(source)
+                self.client.upload_sections(
                     corpus_id=source_id,
-                    chunks=source.split("."),
+                    sections=strs,
+                    sections_id=ids,
                     doc_id=id_,
                     metadata={"type": "source"}
                 )
-                self.client.upload_chunk(
+                ids, summary_offsets, strs = self.split_text_into_sections(summary)
+                self.client.upload_sections(
                     corpus_id=summary_id,
-                    chunks=summary.split("."),
+                    sections=strs,
+                    sections_id=ids,
                     doc_id=id_,
                     metadata={"type": "summary"}
                 )
                 schemas.append({
                     "_id": id_,
                     "source": source,
-                    "summary": summary
+                    "summary": summary,
+                    "source_offsets": source_offsets,
+                    "summary_offsets": summary_offsets
                 })
         return source_id, summary_id, schemas
     
@@ -81,22 +118,28 @@ class Ingester:
                 source = item["source"]
                 summary = item["summary"]
                 id_ = f"mercury_{index}"
-                self.client.upload_chunk(
+                ids, source_offsets, strs = self.split_text_into_sections(source)
+                self.client.upload_sections(
                     corpus_id=source_id,
-                    chunks=source.split("."),
+                    sections=strs,
+                    sections_id=ids,
                     doc_id=id_,
                     metadata={"type": "source"}
                 )
-                self.client.upload_chunk(
+                ids, summary_offsets, strs = self.split_text_into_sections(summary)
+                self.client.upload_sections(
                     corpus_id=summary_id,
-                    chunks=summary.split("."),
+                    sections=strs,
+                    sections_id=ids,
                     doc_id=id_,
                     metadata={"type": "summary"}
                 )
                 schemas.append({
                     "_id": id_,
                     "source": source,
-                    "summary": summary
+                    "summary": summary,
+                    "source_offsets": source_offsets,
+                    "summary_offsets": summary_offsets
                 })
         return source_id, summary_id, schemas
     
@@ -108,22 +151,28 @@ class Ingester:
             source = item["source"]
             summary = item["summary"]
             id_ = f"mercury_{index}"
-            self.client.upload_chunk(
+            ids, source_offsets, strs = self.split_text_into_sections(source)
+            self.client.upload_sections(
                 corpus_id=source_id,
-                chunks=source.split("."),
+                sections=strs,
+                sections_id=ids,
                 doc_id=id_,
                 metadata={"type": "source"}
             )
-            self.client.upload_chunk(
+            ids, summary_offsets, strs = self.split_text_into_sections(summary)
+            self.client.upload_sections(
                 corpus_id=summary_id,
-                chunks=summary.split("."),
+                sections=strs,
+                sections_id=ids,
                 doc_id=id_,
                 metadata={"type": "summary"}
             )
             schemas.append({
                 "_id": id_,
                 "source": source,
-                "summary": summary
+                "summary": summary,
+                "source_offsets": source_offsets,
+                "summary_offsets": summary_offsets
             })
         return source_id, summary_id, schemas
     

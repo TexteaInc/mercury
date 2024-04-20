@@ -6,13 +6,12 @@ export default function RootLayout({ children }) {
       </head>
       <body
         style={{
-          padding: "1em",
-          margin: "1em",
+          margin: "0",
+          height: "100vh",
         }}
       >
-        {children}
+        <div style={{ width: "98%", padding: "1rem", margin: "0 auto" }}>{children}</div>
       </body>
     </html>
   )
 }
-

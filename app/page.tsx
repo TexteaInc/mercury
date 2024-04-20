@@ -17,9 +17,10 @@ import { atomWithStorage } from "jotai/utils"
 import _ from "lodash"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import Tooltip from "../components/tooltip"
+import mergeArrays from "../utils/mergeArray"
 import getRangeTextHandlableRange from "../utils/rangeTextNodes"
 import { getAllTasksLength, getSingleTask, labelText, selectText } from "../utils/request"
-import { type SectionResponse, type SectionResponseSlice, type Task, userSectionResponse } from "../utils/types"
+import { type SectionResponse, type Task, userSectionResponse } from "../utils/types"
 
 const labelIndexAtom = atomWithStorage("labelIndex", 0)
 
@@ -90,9 +91,9 @@ export default function Index() {
 
   useLayoutEffect(() => {
     if (registerLock.current) return
-    document.body.addEventListener("mouseup", () => {
-      console.log("mouseup")
+    document.body.addEventListener("mouseup", event => {
       const selection = window.getSelection()
+      console.log(selection)
       if (
         !selection.containsNode(document.getElementById("summary"), true) &&
         !selection.containsNode(document.getElementById("doc"), true)
@@ -103,6 +104,28 @@ export default function Index() {
           washHand()
         }
         return
+      }
+
+      if (selection.toString().trim() === "") {
+        const target = event.target as HTMLElement
+        if (target.tagName === "SPAN") {
+          const span = target as HTMLSpanElement
+          if (span.parentElement?.id === "summary" || span.parentElement?.id === "doc") {
+            return
+          }
+        } else if (target.tagName === "P") {
+          const p = target as HTMLParagraphElement
+          if (p.id === "summary" || p.id === "doc") {
+            return
+          }
+        } else {
+          if (userSelection !== null) {
+            setUserSelection(null)
+          } else {
+            washHand()
+          }
+          return
+        }
       }
     })
     registerLock.current = true
@@ -172,62 +195,10 @@ export default function Index() {
   }
 
   const SliceText = (props: { text: string; slices: SectionResponse; user: [number, number] | null }) => {
-    let newSlices = structuredClone(props.slices)
-    if (props.user !== null) {
-      // check if the user selection is in the slices
-      const updatedSlices = []
-      for (let i = 0; i < newSlices.length; i++) {
-        const range = [newSlices[i].offset, newSlices[i].offset + newSlices[i].len]
-        const isSame = props.user[0] === range[0] && props.user[1] === range[1]
-        const isResponseFullIncludeUserSelection = props.user[0] > range[0] && props.user[1] < range[1]
-        const isUserSelectionFullIncludeResponse = range[0] > props.user[0] && range[1] < props.user[1]
-        const isUserSelectionHeadIncludeResponse = props.user[0] < range[1]
-        const isUserSelectionTailIncludeResponse = props.user[1] > range[0]
-        if (isSame) {
-          // do nothing
-        } else if (isResponseFullIncludeUserSelection) {
-          const selection = newSlices[i]
-          const head: SectionResponseSlice = {
-            score: selection.score,
-            offset: selection.offset,
-            len: props.user[0] - selection.offset,
-            to_doc: selection.to_doc,
-          }
-          const tail: SectionResponseSlice = {
-            score: selection.score,
-            offset: props.user[1],
-            len: selection.offset + selection.len - props.user[1],
-            to_doc: selection.to_doc,
-          }
-          updatedSlices.push(head)
-          updatedSlices.push(tail)
-        } else if (isUserSelectionFullIncludeResponse) {
-          // do nothing
-        } else if (isUserSelectionHeadIncludeResponse) {
-          const selection = newSlices[i]
-          const responseRemoveUserSelectionHead: SectionResponseSlice = {
-            score: selection.score,
-            offset: selection.offset,
-            len: props.user[0],
-            to_doc: selection.to_doc,
-          }
-          updatedSlices.push(responseRemoveUserSelectionHead)
-        } else if (isUserSelectionTailIncludeResponse) {
-          const selection = newSlices[i]
-          const responseRemoveUserSelectionTail: SectionResponseSlice = {
-            score: selection.score,
-            offset: props.user[1],
-            len: selection.len - (props.user[1] - selection.offset),
-            to_doc: selection.to_doc,
-          }
-          updatedSlices.push(responseRemoveUserSelectionTail)
-        } else {
-          updatedSlices.push(newSlices[i])
-        }
-      }
-      updatedSlices.push(userSectionResponse(props.user[0], props.user[1], rangeId === "summary"))
-      newSlices = updatedSlices
-    }
+    const newSlices =
+      props.user === null
+        ? props.slices
+        : mergeArrays(props.slices, userSectionResponse(props.user[0], props.user[1], rangeId === "summary"))
     const sliceArray = updateSliceArray(props.text, newSlices)
     return (
       <>
@@ -305,10 +276,12 @@ export default function Index() {
           range.startOffset !== range.endOffset
         ) {
           setFirstRange([range.startOffset, range.endOffset])
+          setUserSelection(null)
           setRangeId(element.id)
         }
         if (selection.containsNode(element, false)) {
           setFirstRange([range.startOffset, element.firstChild?.textContent?.length])
+          setUserSelection(null)
           setRangeId(element.id)
         }
         setStage(Stage.First)
@@ -317,6 +290,7 @@ export default function Index() {
       case Stage.First: {
         if (element.id === rangeId || element.parentElement?.id === rangeId) {
           setFirstRange(getRangeTextHandlableRange(range))
+          setUserSelection(null)
         } else {
           setUserSelection(getRangeTextHandlableRange(range))
         }

@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 import uvicorn
 from fastapi import FastAPI
+from starlette.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 import vectara
@@ -11,6 +12,13 @@ load_dotenv()
 
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 client = vectara.vectara()
 
 # VECTARA_CORPUS_ID = int(os.environ.get("VECTARA_CORPUS_ID"))
@@ -64,7 +72,7 @@ async def post_selections(task_index: int, selection: Selection):
         return {
             "error": "Invalid task index"
         }
-    use_id = source_id if not selection.from_summary else summary_id
+    use_id = source_id if selection.from_summary else summary_id
     query = tasks[task_index]["source"][selection.up:selection.bottom] if not selection.from_summary else tasks[task_index]["summary"][selection.up:selection.bottom]
     id_ = tasks[task_index]["_id"]
     response = client.query(
@@ -80,9 +88,14 @@ async def post_selections(task_index: int, selection: Selection):
         score = i["score"]
         offset = -1
         length = -1
+        section_id = 0
+        for j in i["metadata"]:
+            if j["name"] == "section":
+                section_id = int(j["value"]) - 1
         for j in i["metadata"]:
             if j["name"] == "offset":
                 offset = int(j["value"])
+                offset += tasks[task_index]["source_offsets"][section_id] if selection.from_summary else tasks[task_index]["summary_offsets"][section_id]
             if j["name"] == "len":
                 length = int(j["value"])
         selections.append({
