@@ -5,7 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 import vectara
-from ingester import read_file_into_corpus
+from getter import get_full_documents
 
 load_dotenv()
 
@@ -23,7 +23,7 @@ client = vectara.vectara()
 
 # VECTARA_CORPUS_ID = int(os.environ.get("VECTARA_CORPUS_ID"))
 
-source_id, summary_id, tasks = read_file_into_corpus()
+source_id, summary_id, tasks = get_full_documents()
 
 class Label(BaseModel):
     sup: int
@@ -88,16 +88,12 @@ async def post_selections(task_index: int, selection: Selection):
         score = i["score"]
         offset = -1
         length = -1
-        section_id = 0
+        true_offset = 0
         for j in i["metadata"]:
-            if j["name"] == "section":
-                section_id = int(j["value"]) - 1
-        for j in i["metadata"]:
-            if j["name"] == "offset":
-                offset = int(j["value"])
-                offset += tasks[task_index]["source_offsets"][section_id] if selection.from_summary else tasks[task_index]["summary_offsets"][section_id]
-            if j["name"] == "len":
-                length = int(j["value"])
+            if j["name"] == "true_offset":
+                true_offset = int(j["value"])
+        offset = i["resultOffset"] + true_offset
+        length = i["resultLength"]
         selections.append({
             "score": score,
             "offset": offset,

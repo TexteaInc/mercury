@@ -13,13 +13,22 @@ class Schema(TypedDict):
     _id: int
     source: str
     summary: str
-    source_offsets: list[int]
-    summary_offsets: list[int]
     
 # class SectionSlice(TypedDict):
 #     _id: int
 #     offset: int
 #     text: str
+
+class OwnChunk(TypedDict):
+    _id: int
+    true_offset: int
+    true_len: int
+
+class FullChunksWithMetadata(TypedDict):
+    chunks_len: int
+    full_doc_len: int
+    chunks: list[str]
+    chunk_metadata: list[OwnChunk]
 
 load_dotenv()
 
@@ -43,6 +52,7 @@ class Ingester:
         else:
             source_id = self.client.create_corpus("mercury_source")
             summary_id = self.client.create_corpus("mercury_summary")
+            assert isinstance(source_id, int) and isinstance(summary_id, int)
             if source_id and summary_id:
                 return source_id, summary_id
             else:
@@ -64,17 +74,39 @@ class Ingester:
     #         offset += len(item) + 1
     #     return section
     
-    def split_text_into_sections(self, text: str) -> tuple[list[int], list[int], list[str]]:
-        ids = []
-        offsets = []
-        strs = []
+    # def split_text_into_sections(self, text: str) -> tuple[list[int], list[int], list[str]]:
+    #     ids = []
+    #     offsets = []
+    #     strs = []
+    #     offset = 0
+    #     for index, item in enumerate(text.split(".")):
+    #         ids.append(index + 1)
+    #         offsets.append(offset)
+    #         strs.append(item)
+    #         offset += len(item) + 1
+    #     return ids, offsets, strs
+    
+    def split_text_into_chunks(self, text: str) -> FullChunksWithMetadata:
+        chunks: list[OwnChunk] = []
+        full_doc_len = len(text)
         offset = 0
+        strings = []
         for index, item in enumerate(text.split(".")):
-            ids.append(index + 1)
-            offsets.append(offset)
-            strs.append(item)
+            id_ = index + 1
+            true_offset = offset
+            chunks.append({
+                "_id": id_,
+                "true_offset": true_offset,
+                "true_len": len(item),
+            })
+            strings.append(item)
             offset += len(item) + 1
-        return ids, offsets, strs
+        return {
+            "chunk_metadata": chunks,
+            "chunks_len": len(chunks),
+            "full_doc_len": full_doc_len,
+            "chunks": strings
+        }
     
     def read_jsonl_into_corpus(self) -> tuple[int, int, list[Schema]]:
         source_id, summary_id = self.create_corpus()
@@ -84,28 +116,26 @@ class Ingester:
                 source = item["source"]
                 summary = item["summary"]
                 id_ = f"mercury_{index}"
-                ids, source_offsets, strs = self.split_text_into_sections(source)
-                self.client.upload_sections(
+                source_info = self.split_text_into_chunks(source)
+                self.client.create_document_from_chunks(
                     corpus_id=source_id,
-                    sections=strs,
-                    sections_id=ids,
+                    chunks=source_info["chunks"],
+                    chunk_metadata=source_info["chunk_metadata"], # type: ignore
                     doc_id=id_,
-                    metadata={"type": "source"}
+                    doc_metadata={"type": "source", "full": source},
                 )
-                ids, summary_offsets, strs = self.split_text_into_sections(summary)
-                self.client.upload_sections(
+                summary_info = self.split_text_into_chunks(summary)
+                self.client.create_document_from_chunks(
                     corpus_id=summary_id,
-                    sections=strs,
-                    sections_id=ids,
+                    chunks=summary_info["chunks"],
+                    chunk_metadata=summary_info["chunk_metadata"], # type: ignore
                     doc_id=id_,
-                    metadata={"type": "summary"}
+                    doc_metadata={"type": "summary", "full": summary},
                 )
                 schemas.append({
                     "_id": id_,
                     "source": source,
                     "summary": summary,
-                    "source_offsets": source_offsets,
-                    "summary_offsets": summary_offsets
                 })
         return source_id, summary_id, schemas
     
@@ -118,32 +148,30 @@ class Ingester:
                 source = item["source"]
                 summary = item["summary"]
                 id_ = f"mercury_{index}"
-                ids, source_offsets, strs = self.split_text_into_sections(source)
-                self.client.upload_sections(
+                source_info = self.split_text_into_chunks(source)
+                self.client.create_document_from_chunks(
                     corpus_id=source_id,
-                    sections=strs,
-                    sections_id=ids,
+                    chunks=source_info["chunks"],
+                    chunk_metadata=source_info["chunk_metadata"], # type: ignore
                     doc_id=id_,
-                    metadata={"type": "source"}
+                    doc_metadata={"type": "source", "full": source},
                 )
-                ids, summary_offsets, strs = self.split_text_into_sections(summary)
-                self.client.upload_sections(
+                summary_info = self.split_text_into_chunks(summary)
+                self.client.create_document_from_chunks(
                     corpus_id=summary_id,
-                    sections=strs,
-                    sections_id=ids,
+                    chunks=summary_info["chunks"],
+                    chunk_metadata=summary_info["chunk_metadata"], # type: ignore
                     doc_id=id_,
-                    metadata={"type": "summary"}
+                    doc_metadata={"type": "summary", "full": summary},
                 )
                 schemas.append({
                     "_id": id_,
                     "source": source,
                     "summary": summary,
-                    "source_offsets": source_offsets,
-                    "summary_offsets": summary_offsets
                 })
         return source_id, summary_id, schemas
     
-    def read_txt_into_corpus(self) -> tuple[int, int, list[Schema]]:
+    def read_csv_into_corpus(self) -> tuple[int, int, list[Schema]]:
         source_id, summary_id = self.create_corpus()
         schemas = []
         csv_data = pandas.read_csv(self.file_path)
@@ -151,28 +179,28 @@ class Ingester:
             source = item["source"]
             summary = item["summary"]
             id_ = f"mercury_{index}"
-            ids, source_offsets, strs = self.split_text_into_sections(source)
-            self.client.upload_sections(
+            source_info = self.split_text_into_chunks(source)
+            self.client.create_document_from_chunks(
                 corpus_id=source_id,
-                sections=strs,
-                sections_id=ids,
+                chunks=source_info["chunks"],
+                chunk_metadata=source_info["chunk_metadata"], # type: ignore
                 doc_id=id_,
-                metadata={"type": "source"}
+                doc_metadata={"type": "source", "full": source},
+                verbose=True
             )
-            ids, summary_offsets, strs = self.split_text_into_sections(summary)
-            self.client.upload_sections(
+            summary_info = self.split_text_into_chunks(summary)
+            self.client.create_document_from_chunks(
                 corpus_id=summary_id,
-                sections=strs,
-                sections_id=ids,
+                chunks=summary_info["chunks"],
+                chunk_metadata=summary_info["chunk_metadata"], # type: ignore
                 doc_id=id_,
-                metadata={"type": "summary"}
+                doc_metadata={"type": "summary", "full": summary},
+                verbose=True
             )
             schemas.append({
                 "_id": id_,
                 "source": source,
                 "summary": summary,
-                "source_offsets": source_offsets,
-                "summary_offsets": summary_offsets
             })
         return source_id, summary_id, schemas
     
@@ -183,10 +211,18 @@ class Ingester:
         elif file_extension.endswith("json"):
             return self.read_json_into_corpus()
         elif file_extension.endswith("csv"):
-            return self.read_txt_into_corpus()
+            return self.read_csv_into_corpus()
         else:
             raise Exception("Unsupported file format")
 
 def read_file_into_corpus() -> tuple[int, int, list[Schema]]:
     ingester = Ingester()
     return ingester.read_file_into_corpus()
+
+
+if __name__ == "__main__":
+    print("Uploading data to Vectara...")
+    source_id, summary_id, schemas = read_file_into_corpus()
+    print(f"Uploaded {len(schemas)} documents to Vectara")
+    print(f"Source Corpus ID: {source_id}")
+    print(f"Summary Corpus ID: {summary_id}")
