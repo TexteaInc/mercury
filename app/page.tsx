@@ -304,7 +304,7 @@ export default function Index() {
       <Title1>Mercury Label</Title1>
       <br />
       <Field validationMessage={`${labelIndex + 1} / ${maxIndex}`} validationState="none">
-        <ProgressBar value={labelIndex} max={maxIndex} thickness="large" />
+        <ProgressBar value={labelIndex + 1} max={maxIndex} thickness="large" />
       </Field>
       <br />
       <Button onClick={washHand}>Wash Hand</Button>
