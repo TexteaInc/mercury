@@ -1,8 +1,8 @@
 __all__ = ["get_full_documents"]
 
-import vectara
 import os
 
+import vectara
 from dotenv import load_dotenv
 
 
@@ -21,6 +21,7 @@ def list_all_documents(client: vectara.vectara, corpus_id: int):
             else:
                 break
 
+
 class Getter:
     def __init__(self):
         load_dotenv()
@@ -29,25 +30,25 @@ class Getter:
         self.summary_id = int(os.environ.get("MERCURY_SUMMARY_ID", -1))
         if self.source_id == -1 or self.summary_id == -1:
             print("Failed to get corpus id")
-            print("Please set MERCURY_SOURCE_ID and MERCURY_SUMMARY_ID later in the .env file")
+            print(
+                "Please set MERCURY_SOURCE_ID and MERCURY_SUMMARY_ID later in the .env file"
+            )
             self.source_id = int(input("Enter source corpus id (temp): "))
             self.summary_id = int(input("Enter summary corpus id (temp): "))
-    
+
     def get_full_documens(self):
         tasks = []
         tmps_tasks = {}
+
         def push_to_tmps_tasks(id_, source, summary):
             if id_ not in tmps_tasks:
-                tmps_tasks[id_] = {
-                    "source": source,
-                    "summary": summary
-                }
+                tmps_tasks[id_] = {"source": source, "summary": summary}
             else:
                 if source:
                     tmps_tasks[id_]["source"] = source
                 if summary:
                     tmps_tasks[id_]["summary"] = summary
-    
+
         for doc in list_all_documents(self.client, self.source_id):
             id_ = doc["id"]
             for meta in doc["metadata"]:
@@ -61,12 +62,11 @@ class Getter:
                     push_to_tmps_tasks(id_, None, meta["value"])
                     break
         for id_, task in tmps_tasks.items():
-            tasks.append({
-                "_id": id_,
-                "source": task["source"],
-                "summary": task["summary"]
-            })
+            tasks.append(
+                {"_id": id_, "source": task["source"], "summary": task["summary"]}
+            )
         return self.source_id, self.summary_id, tasks
+
 
 def get_full_documents():
     getter = Getter()

@@ -1,5 +1,18 @@
 import type { AllTasksLength, LabelRequest, Normal, SectionResponse, SelectionRequest, Task } from "./types"
 
+const getKey = (): Promise<string> => {
+  const key = localStorage.getItem("key")
+  if (key === "" || key === null) {
+    return fetch("/user/new")
+      .then(response => response.json())
+      .then(data => {
+        localStorage.setItem("key", data.key)
+        return data.key
+      })
+  }
+  return Promise.resolve(key)
+}
+
 const getAllTasksLength = (): Promise<AllTasksLength> => {
   return fetch("/task")
     .then(response => response.json())
@@ -31,17 +44,19 @@ const selectText = (taskIndex: number, req: SelectionRequest): Promise<SectionRe
 }
 
 const labelText = (taskIndex: number, req: LabelRequest): Promise<Normal> => {
-  return fetch(`/task/${taskIndex}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(req),
-  })
-    .then(response => response.json())
+  return getKey().then(key => {
+    return fetch(`/task/${taskIndex}/label`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Key": key,
+      },
+      body: JSON.stringify(req),
+    }).then(response => response.json())
     .then(data => {
       return data as Normal
     })
+  })
 }
 
 export { getAllTasksLength, getSingleTask, selectText, labelText }

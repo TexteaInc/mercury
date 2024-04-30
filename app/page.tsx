@@ -31,28 +31,52 @@ enum Stage {
 
 const DISBALE_QUERY = false
 
-const updateSliceArray = (text: string, slices: SectionResponse): [number, number, boolean, number][] => {
-  if (slices.length === 0) return [[0, text.length - 1, false, 0] as [number, number, boolean, number]]
-  const sliceArray: [number, number, boolean, number][] = slices.map(slice => {
-    return [slice.offset, slice.offset + slice.len - 1, true, slice.score]
-  })
+// start, end, isBackend, score, true_index
+const updateSliceArray = (text: string, slices: SectionResponse): [number, number, boolean, number, number][] => {
+  if (slices.length === 0) return [[0, text.length - 1, false, 0, -1] as [number, number, boolean, number, number]]
+  const sliceArray: [number, number, boolean, number, number][] = []
+  for (let i = 0; i < slices.length; i++) {
+    const slice = slices[i]
+    sliceArray.push([slice.offset, slice.offset + slice.len - 1, true, slice.score, i])
+  }
   sliceArray.sort((a, b) => a[0] - b[0])
-  const newSliceArray: [number, number, boolean, number][] = []
+  const newSliceArray: [number, number, boolean, number, number][] = []
   for (let i = 0; i < sliceArray.length; i++) {
     const currentSlice = sliceArray[i]
     if (i > 0 && currentSlice[0] > sliceArray[i - 1][1]) {
-      newSliceArray.push([sliceArray[i - 1][1] + 1, currentSlice[0] - 1, false, 0])
+      newSliceArray.push([sliceArray[i - 1][1] + 1, currentSlice[0] - 1, false, 0, -1])
     }
     newSliceArray.push(currentSlice)
   }
   if (sliceArray[sliceArray.length - 1][1] < text.length - 1) {
-    newSliceArray.push([sliceArray[sliceArray.length - 1][1] + 1, text.length - 1, false, 0])
+    newSliceArray.push([sliceArray[sliceArray.length - 1][1] + 1, text.length - 1, false, 0, -1])
   }
   if (newSliceArray[0][0] !== 0) {
-    newSliceArray.unshift([0, newSliceArray[0][0] - 1, false, 0])
+    newSliceArray.unshift([0, newSliceArray[0][0] - 1, false, 0, -1])
   }
 
   return newSliceArray
+}
+
+const normalizationColor = (score: number[]) => {
+  const minScore = Math.min(...score)
+  const maxScore = Math.max(...score)
+  const normalScores = []
+  for (const single of score) {
+    normalScores.push((single - minScore) / (maxScore - minScore))
+  }
+  return normalScores
+}
+const colors = [
+  "#00a6ff",
+  "#1cb0ff",
+  "#38baff",
+  "#70cdff",
+  "#a8e1ff",
+  "#c4ebff",
+]
+const getColor = (score: number) => {
+  return colors[6 - Math.floor(score * 6)]
 }
 
 export default function Index() {
@@ -93,7 +117,8 @@ export default function Index() {
     if (registerLock.current) return
     document.body.addEventListener("mouseup", event => {
       const selection = window.getSelection()
-      console.log(selection)
+      const target = event.target as HTMLElement
+      if (target.id === "yesButton" || target.id === "noButton") return
       if (
         !selection.containsNode(document.getElementById("summary"), true) &&
         !selection.containsNode(document.getElementById("doc"), true)
@@ -107,7 +132,6 @@ export default function Index() {
       }
 
       if (selection.toString().trim() === "") {
-        const target = event.target as HTMLElement
         if (target.tagName === "SPAN") {
           const span = target as HTMLSpanElement
           if (span.parentElement?.id === "summary" || span.parentElement?.id === "doc") {
@@ -140,8 +164,8 @@ export default function Index() {
       if (DISBALE_QUERY) return
       setWaitting(rangeId === "summary" ? "doc" : "summary")
       selectText(labelIndex, {
-        up: firstRange[0],
-        bottom: firstRange[1],
+        start: firstRange[0],
+        end: firstRange[1],
         from_summary: rangeId === "summary",
       })
         .then(response => {
@@ -200,23 +224,17 @@ export default function Index() {
         ? props.slices
         : mergeArrays(props.slices, userSectionResponse(props.user[0], props.user[1], rangeId === "summary"))
     const sliceArray = updateSliceArray(props.text, newSlices)
+    const allScore = []
+    for (const slice of newSlices) {
+      allScore.push(slice.score)
+    }
+    const normalColor = normalizationColor(allScore)
     return (
       <>
         {sliceArray.map(slice => {
           const isBackendSlice = slice[2]
           const score = slice[3]
-          const color =
-            0 <= score && score <= 0.2
-              ? "#e0f2fe"
-              : 0.2 < score && score <= 0.4
-                ? "#bae6fd"
-                : 0.4 < score && score <= 0.6
-                  ? "#7dd3fc"
-                  : 0.6 < score && score <= 0.8
-                    ? "#38bdf8"
-                    : score === 2
-                      ? "#0ee96d"
-                      : "#0ea5e9"
+          const color = slice[2] ?  getColor(normalColor[slice[4]]) : score === 2 ? "#85e834" : "#ffffff"
           return isBackendSlice ? (
             <Tooltip
               data-mercury-label-start={slice[0]}
@@ -228,21 +246,21 @@ export default function Index() {
               onYes={() => {
                 if (firstRange === null || rangeId === null) return Promise.resolve()
                 return labelText(labelIndex, {
-                  sup: rangeId === "summary" ? slice[0] : firstRange[0],
-                  sbottom: rangeId === "summary" ? slice[1] : firstRange[1],
-                  dup: rangeId === "summary" ? firstRange[0] : slice[0],
-                  dbottom: rangeId === "summary" ? firstRange[1] : slice[1],
-                  correct: true,
+                  summary_start: rangeId === "summary" ? slice[0] : firstRange[0],
+                  summary_end: rangeId === "summary" ? slice[1] : firstRange[1],
+                  source_start: rangeId === "summary" ? firstRange[0] : slice[0],
+                  source_end: rangeId === "summary" ? firstRange[1] : slice[1],
+                  consistent: true,
                 }).then(() => {})
               }}
               onNo={() => {
                 if (firstRange === null || rangeId === null) return Promise.resolve()
                 return labelText(labelIndex, {
-                  sup: rangeId === "summary" ? slice[0] : firstRange[0],
-                  sbottom: rangeId === "summary" ? slice[1] : firstRange[1],
-                  dup: rangeId === "summary" ? firstRange[0] : slice[0],
-                  dbottom: rangeId === "summary" ? firstRange[1] : slice[1],
-                  correct: false,
+                  summary_start: rangeId === "summary" ? slice[0] : firstRange[0],
+                  summary_end: rangeId === "summary" ? slice[1] : firstRange[1],
+                  source_start: rangeId === "summary" ? firstRange[0] : slice[0],
+                  source_end: rangeId === "summary" ? firstRange[1] : slice[1],
+                  consistent: false,
                 }).then(() => {})
               }}
             />

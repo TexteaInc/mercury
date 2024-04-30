@@ -8,16 +8,16 @@ export type AllTasksLength = {
 }
 
 export type LabelRequest = {
-  sup: number
-  sbottom: number
-  dup: number
-  dbottom: number
-  correct: boolean
+  summary_start: number
+  summary_end: number
+  source_start: number
+  source_end: number
+  consistent: boolean
 }
 
 export type SelectionRequest = {
-  up: number
-  bottom: number
+  start: number
+  end: number
   from_summary: boolean
 }
 

@@ -72,7 +72,9 @@ const Tooltip = (props: {
           <br />
           <div>
             <Button
-              onClick={() => {
+              id="yesButton"
+              onClick={(event) => {
+                event.stopPropagation()
                 props.onYes().then(() => setOpen(false))
               }}
               style={{ marginRight: ".5rem" }}
@@ -80,7 +82,9 @@ const Tooltip = (props: {
               Yes
             </Button>
             <Button
-              onClick={() => {
+              id="noButton"
+              onClick={(event) => {
+                event.stopPropagation()
                 props.onNo().then(() => setOpen(false))
               }}
             >
