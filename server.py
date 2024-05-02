@@ -1,13 +1,15 @@
+import uuid
+from typing import Annotated
+
 import uvicorn
 import vectara
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import uuid
 from starlette.middleware.cors import CORSMiddleware
-from typing import Annotated
 
+from database import Database
 from getter import get_full_documents
 
 load_dotenv()
@@ -21,6 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 client = vectara.vectara()
+database = Database()
 
 
 source_id, summary_id, tasks = get_full_documents()
@@ -38,13 +41,18 @@ class Selection(BaseModel):
     start: int
     end: int
     from_summary: bool
-    
-    
+
+
 @app.get("/user/new")
 async def create_new_user():
-    return {
-        "key": uuid.uuid4().hex
-    }
+    return {"key": uuid.uuid4().hex}
+
+
+@app.get("/user/export")
+async def export_user_data(user_key: Annotated[str, Header()]):
+    if user_key.startswith("\"") and user_key.endswith("\""):
+        user_key = user_key[1:-1]
+    return database.export_user_data(user_key)
 
 
 @app.get("/task")
@@ -62,7 +70,19 @@ async def get_task(task_index: int = 0):
 
 @app.post("/task/{task_index}/label")
 async def post_task(task_index: int, label: Label, user_key: Annotated[str, Header()]):
-    print(task_index, label, user_key)
+    if user_key.startswith("\"") and user_key.endswith("\""):
+        user_key = user_key[1:-1]
+    database.push_new_document(
+        {
+            "task_id": tasks[task_index]["_id"],
+            "summary_start": label.summary_start,
+            "summary_end": label.summary_end,
+            "source_start": label.source_start,
+            "source_end": label.source_end,
+            "consistent": label.consistent,
+            "user_id": user_key,
+        }
+    )
     return {"message": "success"}
 
 

@@ -2,12 +2,31 @@ __all__ = ["read_file_into_corpus"]
 
 import json
 import os
+from enum import Enum
 from typing import TypedDict
 
 import jsonlines
 import pandas
+import requests
 from dotenv import load_dotenv
 from vectara import vectara
+
+
+class FilterAttributeType(Enum):
+    UNDEFINED = "FILTER_ATTRIBUTE_TYPE__UNDEFINED"
+    INTEGER = "FILTER_ATTRIBUTE_TYPE__INTEGER"
+    INTEGER_LIST = "FILTER_ATTRIBUTE_TYPE__INTEGER_LIST"
+    REAL = "FILTER_ATTRIBUTE_TYPE__REAL"
+    REAL_LIST = "FILTER_ATTRIBUTE_TYPE__REAL_LIST"
+    TEXT = "FILTER_ATTRIBUTE_TYPE__TEXT"
+    TEXT_LIST = "FILTER_ATTRIBUTE_TYPE__TEXT_LIST"
+    BOOLEAN = "FILTER_ATTRIBUTE_TYPE__BOOLEAN"
+
+
+class FilterAttributeLevel(Enum):
+    UNDEFINED = "FILTER_ATTRIBUTE_LEVEL__UNDEFINED"
+    DOCUMENT = "FILTER_ATTRIBUTE_LEVEL__DOCUMENT"
+    DOCUMENT_PART = "FILTER_ATTRIBUTE_LEVEL__DOCUMENT_PART"
 
 
 class Schema(TypedDict):
@@ -45,8 +64,55 @@ def get_mercury_file_path() -> str:
     return path
 
 
+class BetterVectara(vectara):
+    def create_corpus_with_metadata_filters(
+        self,
+        corpus_name: str,
+        corpus_description: str = "",
+        metadata_filters: list[dict] = [],
+    ):
+        url = f"{self.base_url}/v1/create-corpus"
+
+        filter_attributes = []
+
+        for metadata_filter in metadata_filters:
+            filter_attributes.append(
+                {
+                    "name": metadata_filter["name"],
+                    "description": "",
+                    "indexed": metadata_filter["indexed"],
+                    "type": metadata_filter["type"].value,
+                    "level": metadata_filter["level"].value,
+                }
+            )
+
+        payload = json.dumps(
+            {
+                "corpus": {
+                    "name": corpus_name,
+                    "description": corpus_description,
+                    "filterAttributes": filter_attributes,
+                }
+            }
+        )
+
+        headers = {"customer-id": self.customer_id}
+
+        if self.api_key:
+            headers["x-api-key"] = self.api_key
+        else:
+            headers["Authorization"] = f"Bearer {self.jwt_token}"
+
+        response = requests.post(url, headers=headers, data=payload)
+
+        if response.status_code == 200:
+            return response.json()["corpusId"]
+        else:
+            raise Exception(f"Failed to create corpus: {response.text}")
+
+
 class Ingester:
-    client = vectara()
+    client = BetterVectara()
 
     def __init__(self):
         self.file_path = get_mercury_file_path()
@@ -65,6 +131,41 @@ class Ingester:
                 return source_id, summary_id
             else:
                 raise Exception("Failed to create corpus")
+
+    def create_database(self) -> int:
+        database_id = int(os.environ.get("MERCURY_DATABASE_ID", -1))
+        if database_id != -1:
+            self.client.reset_corpus(database_id)
+            return database_id
+        else:
+            database_id = self.client.create_corpus_with_metadata_filters(
+                "mercury_database",
+                metadata_filters=[
+                    {
+                        "name": "user_id",
+                        "indexed": True,
+                        "type": FilterAttributeType.TEXT,
+                        "level": FilterAttributeLevel.DOCUMENT,
+                    },
+                    {
+                        "name": "task_id",
+                        "indexed": True,
+                        "type": FilterAttributeType.TEXT,
+                        "level": FilterAttributeLevel.DOCUMENT,
+                    },
+                    {
+                        "name": "raw_request",
+                        "indexed": True,
+                        "type": FilterAttributeType.TEXT,
+                        "level": FilterAttributeLevel.DOCUMENT,
+                    },
+                ],
+            )
+            assert isinstance(database_id, int)
+            if database_id:
+                return database_id
+            else:
+                raise Exception("Failed to create database")
 
     def reset_corpus(self, source_id: int, summary_id: int):
         self.client.reset_corpus(source_id)
@@ -140,7 +241,7 @@ class Ingester:
                     chunks=summary_info["chunks"],
                     chunk_metadata=summary_info["chunk_metadata"],  # type: ignore
                     doc_id=id_,
-                    doc_metadata={"type": "summary", "full": summary, "label": []},
+                    doc_metadata={"type": "summary", "full": summary},
                 )
                 schemas.append(
                     {
@@ -174,7 +275,7 @@ class Ingester:
                     chunks=summary_info["chunks"],
                     chunk_metadata=summary_info["chunk_metadata"],  # type: ignore
                     doc_id=id_,
-                    doc_metadata={"type": "summary", "full": summary, "label": []},
+                    doc_metadata={"type": "summary", "full": summary},
                 )
                 schemas.append(
                     {
@@ -208,7 +309,7 @@ class Ingester:
                 chunks=summary_info["chunks"],
                 chunk_metadata=summary_info["chunk_metadata"],  # type: ignore
                 doc_id=id_,
-                doc_metadata={"type": "summary", "full": summary, "label": []},
+                doc_metadata={"type": "summary", "full": summary},
                 verbose=True,
             )
             schemas.append(
@@ -238,8 +339,11 @@ def read_file_into_corpus() -> tuple[int, int, list[Schema]]:
 
 
 if __name__ == "__main__":
+    ingester = Ingester()
     print("Uploading data to Vectara...")
-    source_id, summary_id, schemas = read_file_into_corpus()
+    source_id, summary_id, schemas = ingester.read_file_into_corpus()
     print(f"Uploaded {len(schemas)} documents to Vectara")
+    database_id = ingester.create_database()
     print(f"Source Corpus ID: {source_id}")
     print(f"Summary Corpus ID: {summary_id}")
+    print(f"Database Corpus ID: {database_id}")

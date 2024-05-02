@@ -19,7 +19,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import Tooltip from "../components/tooltip"
 import mergeArrays from "../utils/mergeArray"
 import getRangeTextHandlableRange from "../utils/rangeTextNodes"
-import { getAllTasksLength, getSingleTask, labelText, selectText } from "../utils/request"
+import { exportLabel, getAllTasksLength, getSingleTask, labelText, selectText } from "../utils/request"
 import { type SectionResponse, type Task, userSectionResponse } from "../utils/types"
 
 const labelIndexAtom = atomWithStorage("labelIndex", 0)
@@ -67,16 +67,21 @@ const normalizationColor = (score: number[]) => {
   }
   return normalScores
 }
-const colors = [
-  "#00a6ff",
-  "#1cb0ff",
-  "#38baff",
-  "#70cdff",
-  "#a8e1ff",
-  "#c4ebff",
-]
+const colors = ["#00a6ff", "#1cb0ff", "#38baff", "#70cdff", "#a8e1ff", "#c4ebff"]
 const getColor = (score: number) => {
   return colors[6 - Math.floor(score * 6)]
+}
+
+const exportJSON = () => {
+  exportLabel().then(data => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "label.json"
+    a.click()
+    URL.revokeObjectURL(url)
+  })
 }
 
 export default function Index() {
@@ -234,7 +239,7 @@ export default function Index() {
         {sliceArray.map(slice => {
           const isBackendSlice = slice[2]
           const score = slice[3]
-          const color = slice[2] ?  getColor(normalColor[slice[4]]) : score === 2 ? "#85e834" : "#ffffff"
+          const color = slice[2] ? getColor(normalColor[slice[4]]) : score === 2 ? "#85e834" : "#ffffff"
           return isBackendSlice ? (
             <Tooltip
               data-mercury-label-start={slice[0]}
@@ -325,7 +330,15 @@ export default function Index() {
         <ProgressBar value={labelIndex + 1} max={maxIndex} thickness="large" />
       </Field>
       <br />
-      <Button onClick={washHand}>Wash Hand</Button>
+      <Button
+        onClick={washHand}
+        style={{
+          marginRight: "1em",
+        }}
+      >
+        Wash Hand
+      </Button>
+      <Button onClick={exportJSON}>Export Labels</Button>
       <br />
       <div
         style={{

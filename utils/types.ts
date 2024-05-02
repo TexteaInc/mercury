@@ -46,3 +46,13 @@ export type Error = {
 export type Normal = {
   message: string
 }
+
+export type LabelData = {
+  task_id: string
+  summary_start: number
+  summary_end: number
+  source_start: number
+  source_end: number
+  consistent: boolean
+  user_id: string
+}

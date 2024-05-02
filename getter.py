@@ -1,4 +1,4 @@
-__all__ = ["get_full_documents"]
+__all__ = ["get_full_documents", "list_all_documents"]
 
 import os
 

@@ -73,7 +73,7 @@ const Tooltip = (props: {
           <div>
             <Button
               id="yesButton"
-              onClick={(event) => {
+              onClick={event => {
                 event.stopPropagation()
                 props.onYes().then(() => setOpen(false))
               }}
@@ -83,7 +83,7 @@ const Tooltip = (props: {
             </Button>
             <Button
               id="noButton"
-              onClick={(event) => {
+              onClick={event => {
                 event.stopPropagation()
                 props.onNo().then(() => setOpen(false))
               }}

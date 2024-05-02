@@ -1,4 +1,4 @@
-import type { AllTasksLength, LabelRequest, Normal, SectionResponse, SelectionRequest, Task } from "./types"
+import type { AllTasksLength, LabelData, LabelRequest, Normal, SectionResponse, SelectionRequest, Task } from "./types"
 
 const getKey = (): Promise<string> => {
   const key = localStorage.getItem("key")
@@ -52,11 +52,26 @@ const labelText = (taskIndex: number, req: LabelRequest): Promise<Normal> => {
         "User-Key": key,
       },
       body: JSON.stringify(req),
-    }).then(response => response.json())
-    .then(data => {
-      return data as Normal
     })
+      .then(response => response.json())
+      .then(data => {
+        return data as Normal
+      })
   })
 }
 
-export { getAllTasksLength, getSingleTask, selectText, labelText }
+const exportLabel = (): Promise<LabelData[]> => {
+  return getKey().then(key => {
+    return fetch("/user/export", {
+      headers: {
+        "User-Key": key,
+      },
+    })
+      .then(response => response.json())
+      .then(data => {
+        return data as LabelData[]
+      })
+  })
+}
+
+export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel }
