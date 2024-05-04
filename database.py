@@ -15,6 +15,7 @@ class LabelData(TypedDict):
     source_start: int
     source_end: int
     consistent: bool
+    task_index: int
     user_id: str
 
 
@@ -32,7 +33,7 @@ def parse_documents_to_label_data_list(
 
 
 def label_data_to_small(data: LabelData) -> str:
-    return f"{data['task_id']},{data['summary_start']},{data['summary_end']},{data['source_start']},{data['source_end']},{data['consistent']},{data['user_id']}"
+    return f"{data['task_id']},{data['summary_start']},{data['summary_end']},{data['source_start']},{data['source_end']},{data['consistent']},{data['user_id']},{data['task_index']}"
 
 
 def small_to_label_data(small: str) -> LabelData:
@@ -45,6 +46,7 @@ def small_to_label_data(small: str) -> LabelData:
         "source_end": int(parts[4]),
         "consistent": parts[5] == "True",
         "user_id": parts[6],
+        "task_index": int(parts[7]),
     }
 
 
@@ -71,7 +73,7 @@ class Database:
         self.documents.append(new_document)
         self.client.create_document_from_chunks(
             corpus_id=self.database_id,
-            chunks=["また街には霧のような秋雨が覆っている。オレは授業中も自分の脳みそを気にしている。頭を触りすぎるものだから、机の上にはフケと頭髪が堆積していた。オレはそれを合理化して軽度急性抜毛症ではないかと自分自身に懸念を表明する。しかし、名付けるという行為は合理的な暴力なのかもしれない。そういえば、誰かが純粋理性批判という主張をしたらしい。なんという冒険家だったろうか。"],
+            chunks=["NO CHUNKS NEEDED FOR THIS DOCUMENT"],
             doc_id="no_need_" + uuid.uuid4().hex,
             doc_metadata={
                 "user_id": new_document["user_id"],

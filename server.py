@@ -80,6 +80,7 @@ async def post_task(task_index: int, label: Label, user_key: Annotated[str, Head
             "source_start": label.source_start,
             "source_end": label.source_end,
             "consistent": label.consistent,
+            "task_index": task_index,
             "user_id": user_key,
         }
     )

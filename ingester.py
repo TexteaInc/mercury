@@ -116,6 +116,7 @@ class Ingester:
 
     def __init__(self):
         self.file_path = get_mercury_file_path()
+        self.exports = []
 
     def create_corpus(self) -> tuple[int, int]:
         source_id = int(os.environ.get("MERCURY_SOURCE_ID", -1))
@@ -126,6 +127,8 @@ class Ingester:
         else:
             source_id = self.client.create_corpus("mercury_source")
             summary_id = self.client.create_corpus("mercury_summary")
+            self.exports.append(f"MERCURY_SOURCE_ID={source_id}")
+            self.exports.append(f"MERCURY_SUMMARY_ID={summary_id}")
             assert isinstance(source_id, int) and isinstance(summary_id, int)
             if source_id and summary_id:
                 return source_id, summary_id
@@ -138,6 +141,7 @@ class Ingester:
             self.client.reset_corpus(database_id)
             return database_id
         else:
+            self.exports.append(f"MERCURY_DATABASE_ID={database_id}")
             database_id = self.client.create_corpus_with_metadata_filters(
                 "mercury_database",
                 metadata_filters=[
@@ -347,3 +351,7 @@ if __name__ == "__main__":
     print(f"Source Corpus ID: {source_id}")
     print(f"Summary Corpus ID: {summary_id}")
     print(f"Database Corpus ID: {database_id}")
+    if ingester.exports:
+        print("Please add the following lines to your .env file:")
+        for export in ingester.exports:
+            print(export)

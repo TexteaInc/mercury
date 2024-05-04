@@ -1,20 +1,10 @@
 "use client"
 
-import {
-  Body1,
-  Button,
-  Card,
-  CardHeader,
-  Field,
-  FluentProvider,
-  ProgressBar,
-  Text,
-  Title1,
-  webLightTheme,
-} from "@fluentui/react-components"
+import { Body1, Button, Card, CardHeader, Field, ProgressBar, Text, Title1 } from "@fluentui/react-components"
 import { useAtom } from "jotai"
 import { atomWithStorage } from "jotai/utils"
 import _ from "lodash"
+import Link from "next/link"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import Tooltip from "../components/tooltip"
 import mergeArrays from "../utils/mergeArray"
@@ -323,7 +313,7 @@ export default function Index() {
   }
 
   return (
-    <FluentProvider theme={webLightTheme}>
+    <>
       <Title1>Mercury Label</Title1>
       <br />
       <Field validationMessage={`${labelIndex + 1} / ${maxIndex}`} validationState="none">
@@ -338,7 +328,17 @@ export default function Index() {
       >
         Wash Hand
       </Button>
-      <Button onClick={exportJSON}>Export Labels</Button>
+      <Button
+        onClick={exportJSON}
+        style={{
+          marginRight: "1em",
+        }}
+      >
+        Export Labels
+      </Button>
+      <Link href="/history.html" rel="noopener noreferrer" target="_blank">
+        <Button>History</Button>
+      </Link>
       <br />
       <div
         style={{
@@ -448,6 +448,6 @@ export default function Index() {
           </Card>
         </div>
       )}
-    </FluentProvider>
+    </>
   )
 }

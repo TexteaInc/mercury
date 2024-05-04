@@ -54,5 +54,6 @@ export type LabelData = {
   source_start: number
   source_end: number
   consistent: boolean
+  task_index: number
   user_id: string
 }
