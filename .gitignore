@@ -48,3 +48,4 @@ config.json
 feedback.db
 dump_small.py
 .env
+data.json

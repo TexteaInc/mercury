@@ -90,3 +90,10 @@ class Database:
 
     def dump_all_data(self):
         return self.documents
+
+if __name__ == "__main__":
+    database = Database()
+    import json
+    print("Dumping data to data.json")
+    with open("data.json", "w") as f:
+        json.dump(database.dump_all_data(), f, indent=4, sort_keys=True, ensure_ascii=False)

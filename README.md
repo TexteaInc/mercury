@@ -28,5 +28,8 @@ You can also write the above environment variables to `.env`.
 Once everything is complete, you can start Mercury by following these steps:
 
 1. `pip3 install -r requirements.txt`
-2. `pnpm install && pnpm build` (if you don't have `pnpm` installed: `npm install -g pnpm`)
-3. `python3 server.py`
+2. `python3 ingester.py` for data initing (if you don't use your own corpus, you need 3 corpuses for this project)
+3. `pnpm install && pnpm build` (if you don't have `pnpm` installed: `npm install -g pnpm`, you may need sudo)
+4. `python3 server.py`
+
+Do not run ingester.py unless you need to reset the database or the source/summary set; to export the database use `python3 database.py`.
