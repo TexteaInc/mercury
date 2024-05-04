@@ -94,6 +94,17 @@ class Database:
 if __name__ == "__main__":
     database = Database()
     import json
+    from getter import get_full_documents
     print("Dumping data to data.json")
+    source_id, summary_id, tasks = get_full_documents()
+    
+    datas = []
+    
+    for data in database.dump_all_data():
+        new_data = data.copy()
+        new_data["summary_label"] = tasks[data["task_index"]]["summary"][data["summary_start"]:data["summary_end"]]
+        new_data["source_label"] = tasks[data["task_index"]]["source"][data["source_start"]:data["source_end"]]
+        datas.append(new_data)
+    
     with open("data.json", "w") as f:
-        json.dump(database.dump_all_data(), f, indent=4, sort_keys=True, ensure_ascii=False)
+        json.dump(datas, f, indent=4, sort_keys=True, ensure_ascii=False)

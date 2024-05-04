@@ -7,6 +7,13 @@ function RootLayout({ children }) {
     <html lang="en">
       <head>
         <title>Mercury</title>
+        <style>
+          {`
+            .fui-DialogSurface {
+              max-width: 80vw;
+            }
+          `}
+        </style>
       </head>
       <body
         style={{

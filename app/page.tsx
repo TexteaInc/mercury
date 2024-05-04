@@ -7,7 +7,7 @@ import _ from "lodash"
 import Link from "next/link"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import Tooltip from "../components/tooltip"
-import mergeArrays from "../utils/mergeArray"
+import { mergeArrays, updateSliceArray } from "../utils/mergeArray"
 import getRangeTextHandlableRange from "../utils/rangeTextNodes"
 import { exportLabel, getAllTasksLength, getSingleTask, labelText, selectText } from "../utils/request"
 import { type SectionResponse, type Task, userSectionResponse } from "../utils/types"
@@ -20,33 +20,6 @@ enum Stage {
 }
 
 const DISBALE_QUERY = false
-
-// start, end, isBackend, score, true_index
-const updateSliceArray = (text: string, slices: SectionResponse): [number, number, boolean, number, number][] => {
-  if (slices.length === 0) return [[0, text.length - 1, false, 0, -1] as [number, number, boolean, number, number]]
-  const sliceArray: [number, number, boolean, number, number][] = []
-  for (let i = 0; i < slices.length; i++) {
-    const slice = slices[i]
-    sliceArray.push([slice.offset, slice.offset + slice.len - 1, true, slice.score, i])
-  }
-  sliceArray.sort((a, b) => a[0] - b[0])
-  const newSliceArray: [number, number, boolean, number, number][] = []
-  for (let i = 0; i < sliceArray.length; i++) {
-    const currentSlice = sliceArray[i]
-    if (i > 0 && currentSlice[0] > sliceArray[i - 1][1]) {
-      newSliceArray.push([sliceArray[i - 1][1] + 1, currentSlice[0] - 1, false, 0, -1])
-    }
-    newSliceArray.push(currentSlice)
-  }
-  if (sliceArray[sliceArray.length - 1][1] < text.length - 1) {
-    newSliceArray.push([sliceArray[sliceArray.length - 1][1] + 1, text.length - 1, false, 0, -1])
-  }
-  if (newSliceArray[0][0] !== 0) {
-    newSliceArray.unshift([0, newSliceArray[0][0] - 1, false, 0, -1])
-  }
-
-  return newSliceArray
-}
 
 const normalizationColor = (score: number[]) => {
   const minScore = Math.min(...score)
@@ -241,20 +214,20 @@ export default function Index() {
               onYes={() => {
                 if (firstRange === null || rangeId === null) return Promise.resolve()
                 return labelText(labelIndex, {
-                  summary_start: rangeId === "summary" ? slice[0] : firstRange[0],
-                  summary_end: rangeId === "summary" ? slice[1] : firstRange[1],
-                  source_start: rangeId === "summary" ? firstRange[0] : slice[0],
-                  source_end: rangeId === "summary" ? firstRange[1] : slice[1],
+                  source_start: rangeId === "summary" ? slice[0] : firstRange[0],
+                  source_end: rangeId === "summary" ? slice[1] + 1 : firstRange[1],
+                  summary_start: rangeId === "summary" ? firstRange[0] : slice[0],
+                  summary_end: rangeId === "summary" ? firstRange[1] : slice[1] + 1,
                   consistent: true,
                 }).then(() => {})
               }}
               onNo={() => {
                 if (firstRange === null || rangeId === null) return Promise.resolve()
                 return labelText(labelIndex, {
-                  summary_start: rangeId === "summary" ? slice[0] : firstRange[0],
-                  summary_end: rangeId === "summary" ? slice[1] : firstRange[1],
-                  source_start: rangeId === "summary" ? firstRange[0] : slice[0],
-                  source_end: rangeId === "summary" ? firstRange[1] : slice[1],
+                  source_start: rangeId === "summary" ? slice[0] : firstRange[0],
+                  source_end: rangeId === "summary" ? slice[1] + 1 : firstRange[1],
+                  summary_start: rangeId === "summary" ? firstRange[0] : slice[0],
+                  summary_end: rangeId === "summary" ? firstRange[1] : slice[1] + 1,
                   consistent: false,
                 }).then(() => {})
               }}
