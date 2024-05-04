@@ -21,6 +21,8 @@ const Tooltip = (props: {
   score: number
   onYes: () => Promise<void>
   onNo: () => Promise<void>
+  start: number
+  end: number
 }) => {
   const [isOpen, setOpen] = useState(false)
   const { refs, floatingStyles, context } = useFloating({
@@ -49,6 +51,8 @@ const Tooltip = (props: {
         }}
         ref={refs.setReference}
         {...getReferenceProps()}
+        data-mercury-label-start={props.start}
+        data-mercury-label-end={props.end}
       >
         {props.text}
       </Text>

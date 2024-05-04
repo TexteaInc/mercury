@@ -7,7 +7,7 @@ import _ from "lodash"
 import Link from "next/link"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import Tooltip from "../components/tooltip"
-import { mergeArrays, updateSliceArray } from "../utils/mergeArray"
+import { updateSliceArray } from "../utils/mergeArray"
 import getRangeTextHandlableRange from "../utils/rangeTextNodes"
 import { exportLabel, getAllTasksLength, getSingleTask, labelText, selectText } from "../utils/request"
 import { type SectionResponse, type Task, userSectionResponse } from "../utils/types"
@@ -32,7 +32,7 @@ const normalizationColor = (score: number[]) => {
 }
 const colors = ["#00a6ff", "#1cb0ff", "#38baff", "#70cdff", "#a8e1ff", "#c4ebff"]
 const getColor = (score: number) => {
-  return colors[6 - Math.floor(score * 6)]
+  return colors[Math.floor(score * (colors.length - 1))]
 }
 
 const exportJSON = () => {
@@ -82,8 +82,7 @@ export default function Index() {
   }, [labelIndex])
 
   useLayoutEffect(() => {
-    if (registerLock.current) return
-    document.body.addEventListener("mouseup", event => {
+    const func = (event) => {
       const selection = window.getSelection()
       const target = event.target as HTMLElement
       if (target.id === "yesButton" || target.id === "noButton") return
@@ -119,8 +118,11 @@ export default function Index() {
           return
         }
       }
-    })
-    registerLock.current = true
+    }
+    document.body.addEventListener("mouseup", func)
+    return () => {
+      document.body.removeEventListener("mouseup", func)
+    }
   }, [userSelection])
 
   useEffect(() => {
@@ -178,7 +180,7 @@ export default function Index() {
         data-mercury-label-start={slice[0]}
         data-mercury-label-end={slice[1]}
         style={{
-          backgroundColor: slice[2] ? "#79c5fb" : undefined,
+          backgroundColor: slice[3] === 2 ? "#79c5fb" : undefined,
         }}
       >
         {props.text.slice(slice[0], slice[1] + 1)}
@@ -190,8 +192,9 @@ export default function Index() {
     const newSlices =
       props.user === null
         ? props.slices
-        : mergeArrays(props.slices, userSectionResponse(props.user[0], props.user[1], rangeId === "summary"))
+        : [userSectionResponse(props.user[0], props.user[1], rangeId === "summary")]
     const sliceArray = updateSliceArray(props.text, newSlices)
+    console.log(sliceArray)
     const allScore = []
     for (const slice of newSlices) {
       allScore.push(slice.score)
@@ -205,8 +208,8 @@ export default function Index() {
           const color = slice[2] ? getColor(normalColor[slice[4]]) : score === 2 ? "#85e834" : "#ffffff"
           return isBackendSlice ? (
             <Tooltip
-              data-mercury-label-start={slice[0]}
-              data-mercury-label-end={slice[1]}
+              start={slice[0]}
+              end={slice[1]}
               key={`slice-${slice[0]}-${slice[1]}`}
               backgroundColor={color}
               text={props.text.slice(slice[0], slice[1] + 1)}
@@ -235,6 +238,9 @@ export default function Index() {
           ) : (
             <Text
               as="span"
+              style={{
+                backgroundColor: color
+              }}
               key={`slice-${slice[0]}-${slice[1]}`}
               data-mercury-label-start={slice[0]}
               data-mercury-label-end={slice[1]}
