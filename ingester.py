@@ -6,7 +6,8 @@ import pandas
 import requests
 from dotenv import load_dotenv
 from tqdm.auto import tqdm
-from vectara import vectara
+
+from better_vectara import BetterVectara as Vectara
 
 
 class FilterAttributeType(Enum):
@@ -54,84 +55,6 @@ class FullChunksWithMetadata(TypedDict):
 load_dotenv()
 
 
-class BetterVectara(vectara):
-    def read_corpus(
-        self,
-        corpusIds: list[int],
-        read_basic_info: bool = True,
-        read_size: bool = False,
-        read_api_keys: bool = False,
-        read_custom_dimensions: bool = False,
-        read_filter_attributes: bool = False,
-    ):
-        url = f"{self.base_url}/v1/read-corpus"
-
-        headers = {"customer-id": self.customer_id}
-
-        if self.api_key:
-            headers["x-api-key"] = self.api_key
-        else:
-            headers["Authorization"] = f"Bearer {self.jwt_token}"
-
-        payload = {
-            "corpusId": corpusIds,
-            "readBasicInfo": read_basic_info,
-            "readSize": read_size,
-            "readApiKeys": read_api_keys,
-            "readCustomDimensions": read_custom_dimensions,
-            "readFilterAttributes": read_filter_attributes,
-        }
-
-        response = requests.post(url, headers=headers, data=json.dumps(payload))
-
-        return response.json()
-
-    def create_corpus_with_metadata_filters(
-        self,
-        corpus_name: str,
-        corpus_description: str = "",
-        metadata_filters: list[dict] = [],
-    ):
-        url = f"{self.base_url}/v1/create-corpus"
-
-        filter_attributes = []
-
-        for metadata_filter in metadata_filters:
-            filter_attributes.append(
-                {
-                    "name": metadata_filter["name"],
-                    "description": "",
-                    "indexed": metadata_filter["indexed"],
-                    "type": metadata_filter["type"].value,
-                    "level": metadata_filter["level"].value,
-                }
-            )
-
-        payload = json.dumps(
-            {
-                "corpus": {
-                    "name": corpus_name,
-                    "description": corpus_description,
-                    "filterAttributes": filter_attributes,
-                }
-            }
-        )
-
-        headers = {"customer-id": self.customer_id}
-
-        if self.api_key:
-            headers["x-api-key"] = self.api_key
-        else:
-            headers["Authorization"] = f"Bearer {self.jwt_token}"
-
-        response = requests.post(url, headers=headers, data=payload)
-
-        if response.status_code == 200:
-            return response.json()["corpusId"]
-        else:
-            raise Exception(f"Failed to create corpus: {response.text}")
-
-
 class Ingester:
     def __init__(
         self,
@@ -141,7 +64,7 @@ class Ingester:
         annotation_corpus_id: int | None = None,
         overwrite_corpora: bool = False,
     ):
-        vectara_client = BetterVectara()
+        vectara_client = Vectara()
         self.vectara_client = vectara_client
         self.file_path = file_to_ingest
 
@@ -181,17 +104,11 @@ class Ingester:
                         "level": FilterAttributeLevel.DOCUMENT,
                     },
                     {
-                        "name": "task_id",
+                        "name": "sample_id",
                         "indexed": True,
                         "type": FilterAttributeType.TEXT,
                         "level": FilterAttributeLevel.DOCUMENT,
-                    },
-                    {
-                        "name": "raw_request",
-                        "indexed": True,
-                        "type": FilterAttributeType.TEXT,
-                        "level": FilterAttributeLevel.DOCUMENT,
-                    },
+                    }
                 ],
             )
             print("A new annotation corpus is created, with ID: ", annotation_corpus_id)
@@ -275,19 +192,8 @@ class Ingester:
                     chunks=text_info["chunks"],
                     chunk_metadata=text_info["chunk_metadata"],  # type: ignore
                     doc_id=id_,
-                    doc_metadata={"type": column, "full": text},
+                    doc_metadata={"type": column, "text": text},
                 )
-                schemas.append(
-                    {
-                        "_id": id_,
-                        "source": source,
-                        "summary": summary,
-                    }
-                )
-        self.schemas = schemas
-        # TODO: What is schemas for?
-        # Answer: Just nothing, it is just a list of dictionaries that contains the source and summary of each document
-        #         The original backend reads this schemas, now we use `getter.py`
 
     # def split_text_into_sections(self, text: str) -> list[SectionSlice]:
     #     section = []
@@ -341,68 +247,68 @@ class Ingester:
         return self.ingest_to_corpora()
 
 
-client = BetterVectara()
-a = client.read_corpus([13], read_filter_attributes=True)
-print(a)
+# client = BetterVectara()
+# a = client.read_corpus([13], read_filter_attributes=True)
+# print(a)
 
-# if __name__ == "__main__":
-#     import argparse
-#     import os
+if __name__ == "__main__":
+    import argparse
+    import os
 
-#     def get_env_id_value(env_name: str) -> int | None:
-#         env = os.environ.get(env_name, None)
-#         if env is not None:
-#             return int(env)
-#         return None
+    def get_env_id_value(env_name: str) -> int | None:
+        env = os.environ.get(env_name, None)
+        if env is not None:
+            return int(env)
+        return None
 
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument(
-#         "file_to_ingest",
-#         type=str,
-#         help="Path to the file to ingest"
-#     )
-#     parser.add_argument(
-#         "--source_corpus_id",
-#         type=int,
-#         help="Source Corpus ID",
-#         default=get_env_id_value("SOURCE_CORPUS_ID"),
-#     )
-#     parser.add_argument(
-#         "--summary_corpus_id",
-#         type=int,
-#         help="Summary Corpus ID",
-#         default=get_env_id_value("SUMMARY_CORPUS_ID"),
-#     )
-#     parser.add_argument(
-#         "--annotation_corpus_id",
-#         type=int,
-#         help="Annotation Corpus ID",
-#         default=get_env_id_value("ANNOTATION_CORPUS_ID"),
-#     )
-#     parser.add_argument(
-#         "--overwrite_corpora",
-#         action="store_true",
-#         help="Whether to overwrite existing corpora",
-#     )
-#     args = parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "file_to_ingest",
+        type=str,
+        help="Path to the file to ingest"
+    )
+    parser.add_argument(
+        "--source_corpus_id",
+        type=int,
+        help="Source Corpus ID",
+        default=get_env_id_value("SOURCE_CORPUS_ID"),
+    )
+    parser.add_argument(
+        "--summary_corpus_id",
+        type=int,
+        help="Summary Corpus ID",
+        default=get_env_id_value("SUMMARY_CORPUS_ID"),
+    )
+    parser.add_argument(
+        "--annotation_corpus_id",
+        type=int,
+        help="Annotation Corpus ID",
+        default=get_env_id_value("ANNOTATION_CORPUS_ID"),
+    )
+    parser.add_argument(
+        "--overwrite_corpora",
+        action="store_true",
+        help="Whether to overwrite existing corpora",
+    )
+    args = parser.parse_args()
 
-#     print("Uploading data to Vectara...")
-#     ingester = Ingester(
-#         file_to_ingest=args.file_to_ingest,
-#         source_corpus_id=args.source_corpus_id,
-#         summary_corpus_id=args.summary_corpus_id,
-#         annotation_corpus_id=args.annotation_corpus_id,
-#         overwrite_corpora=args.overwrite_corpora,
-#     )
-#     ingester.main()
+    print("Uploading data to Vectara...")
+    ingester = Ingester(
+        file_to_ingest=args.file_to_ingest,
+        source_corpus_id=args.source_corpus_id,
+        summary_corpus_id=args.summary_corpus_id,
+        annotation_corpus_id=args.annotation_corpus_id,
+        overwrite_corpora=args.overwrite_corpora,
+    )
+    ingester.main()
 
-#     print(f"Uploaded {len(ingester.schemas)} documents to Vectara")
+    print(f"Uploaded {len(ingester.schemas)} documents to Vectara")
 
-#     if not args.source_corpus_id or not args.summary_corpus_id or not args.annotation_corpus_id:
-#         print("Please add the folloiwing lines to your .env file:")
-#         if not args.source_corpus_id:
-#             print(f"SOURCE_CORPUS_ID={ingester.source_corpus_id}")
-#         if not args.summary_corpus_id:
-#             print(f"SUMMARY_CORPUS_ID={ingester.summary_corpus_id}")
-#         if not args.annotation_corpus_id:
-#             print(f"ANNOTATION_CORPUS_ID={ingester.annotation_corpus_id}")
+    if not args.source_corpus_id or not args.summary_corpus_id or not args.annotation_corpus_id:
+        print("Please add the folloiwing lines to your .env file:")
+        if not args.source_corpus_id:
+            print(f"SOURCE_CORPUS_ID={ingester.source_corpus_id}")
+        if not args.summary_corpus_id:
+            print(f"SUMMARY_CORPUS_ID={ingester.summary_corpus_id}")
+        if not args.annotation_corpus_id:
+            print(f"ANNOTATION_CORPUS_ID={ingester.annotation_corpus_id}")
