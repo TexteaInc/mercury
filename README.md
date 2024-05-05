@@ -41,12 +41,11 @@ Mercury is powered by Vectara's semantic search engine -- which is among the bes
 
    Run `python3 ingester.py -h` to see the options.
 
-   The ingester takes a CSV, JSON, or JSONL file of two fields/columns for each sample: `source` and `summary`. Mercury uses three Vectara corpora to store the sources, the summaries, and the human annotations. You can provide the corpus IDs to overwrite or append data to existing corpora.
+   The ingester takes a CSV, JSON, or JSONL file of two fields/columns for each sample: `source` and `summary`. Both fields are strings. Mercury uses three Vectara corpora to store the sources, the summaries, and the human annotations. You can provide the corpus IDs to overwrite or append data to existing corpora.
 
 3. `pnpm install && pnpm build` (if you don't have `pnpm` installed: `npm install -g pnpm`, you may need sudo)
 4. `python3 server.py`
-
-Do not run ingester.py unless you need to reset the database or the source/summary set; to export the database use `python3 database.py`.
+5. To dump existing annotations, run `python3 database.py -h` to see how.
 
 ## Technical details
 
@@ -54,7 +53,7 @@ For each dataset for labeling, Mercury uses three Vectara corpora:
 
 1. Source
 2. Summary
-3. Annotation
+3. Annotation -- no text data. metadata is used to store the human annotations. 
 
 In summarization, a summary corresponds to a source. The source corpus is the opposite of the summary corpus. And vice versa.
 The three parts of a sample can be associated across the three corpora by a metedata field called `id`.
@@ -65,4 +64,29 @@ For each sample, Mercury displays the source and the summary side by side. The u
 
 When a text span is selected, Mercury uses Vectara's search engine to find semantically related text spans in the opposite corpus, e.g., selecting text in summary and searching in source. The related text spans are highlighted.
 
-The human annotations are stored like this...
+The dumped human annotations are stored in a JSON format like this: 
+
+```python
+[
+    {# first sample 
+        'source': str, 
+        'summary': str,
+        'annotations': [ # a list of annotations from many human annotators
+            {
+                'source': {
+                    'text': str,
+                    'start': int,
+                    'end': int,
+                },
+                'summary': {
+                    'text': str,
+                    'start': int,
+                    'end': int
+                },
+                'label': str,
+                'annotator': str
+            }
+        ]
+    }
+]
+```

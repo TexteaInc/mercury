@@ -1,113 +1,92 @@
 import os
 import uuid
-from typing import TypedDict
+from typing import TypedDict, List, Dict, NamedTuple
+import json
 
-import vectara
+from better_vectara import BetterVectara as Vectara
 from dotenv import load_dotenv
 
-from getter import list_all_documents
+class LabelData(NamedTuple): # human annotation on a sample
+    def __init__(self,
+        sample_id: str, # renamed from task_id
+        summary_start: int,
+        summary_end: int,
+        source_start: int,
+        source_end: int,
+        consistent: bool,
+        user_id: str,
+        task_index: int # TODO: do we need task_index?
+    ):
+        self.sample_id = sample_id
+        self.summary_start = summary_start
+        self.summary_end = summary_end
+        self.source_start = source_start
+        self.source_end = source_end
+        self.consistent = consistent
+        self.user_id = user_id
+        self.task_index = task_index
 
-
-class LabelData(TypedDict):
-    task_id: str
-    summary_start: int
-    summary_end: int
-    source_start: int
-    source_end: int
-    consistent: bool
-    task_index: int
-    user_id: str
-
-
-def parse_documents_to_label_data_list(
-    client: vectara.vectara, source_id: int
-) -> list[LabelData]:
+# def parse_documents_to_label_data_list(
+def fetch_annotations_from_corpus(
+    client: Vectara, source_id: int
+) -> List[LabelData]:
+    
+    print("Getting all documents from database for fast checking...")    
     data_list = []
-    for doc in list_all_documents(client, source_id):
+    for doc in client.list_all_documents(client, source_id):
         # print(doc)
-        for meta in doc["metadata"]:
-            if meta["name"] == "raw_request":
-                data_list.append(small_to_label_data(meta["value"]))
-                break
+        data_list.append(LabelData(**doc["metadata"]))
     return data_list
 
-
-def label_data_to_small(data: LabelData) -> str:
-    return f"{data['task_id']},{data['summary_start']},{data['summary_end']},{data['source_start']},{data['source_end']},{data['consistent']},{data['user_id']},{data['task_index']}"
-
-
-def small_to_label_data(small: str) -> LabelData:
-    parts = small.split(",")
-    return {
-        "task_id": parts[0],
-        "summary_start": int(parts[1]),
-        "summary_end": int(parts[2]),
-        "source_start": int(parts[3]),
-        "source_end": int(parts[4]),
-        "consistent": parts[5] == "True",
-        "user_id": parts[6],
-        "task_index": int(parts[7]),
-    }
-
-
 class Database:
-    def __init__(self):
-        load_dotenv()
-
-        self.database_id = int(os.environ.get("ANNOTATION_CORPUS_ID", -1))
-
-        if self.database_id == -1:
-            raise Exception("Annotation ID not found in environment variables.")
-
-        self.client = vectara.vectara()
-
-        print("Getting all documents from database for fast checking...")
-        self.documents = parse_documents_to_label_data_list(
-            self.client, self.database_id
+    def __init__(self, 
+        annotation_corpus_id: int, 
+        vectara_client: Vectara = Vectara()
+        ):
+        
+        self.vectara_client = vectara_client
+        self.annotation_corpus_id = annotation_corpus_id
+        self.annotations: List[LabelData] = fetch_annotations_from_corpus(
+            self.vectara_client, self.annotation_corpus_id
         )
-        # print(self.documents)
 
-    def push_new_document(self, new_document: LabelData):
-        if self.check_document_exists(new_document):
+    def push_annotation(self, label_data: LabelData):
+        if label_data in self.annotations:
             return
-        self.documents.append(new_document)
-        self.client.create_document_from_chunks(
-            corpus_id=self.database_id,
-            chunks=["NO CHUNKS NEEDED FOR THIS DOCUMENT"],
+        self.annotations.append(label_data)
+        self.vectara_client.create_document_from_chunks(
+            corpus_id= self.annotation_corpus_id,
+            chunks=["NO CHUNKS"],
             doc_id="no_need_" + uuid.uuid4().hex,
-            doc_metadata={
-                "user_id": new_document["user_id"],
-                "task_id": new_document["task_id"],
-                "raw_request": label_data_to_small(new_document),
-            },
+            doc_metadata=label_data._asdict(),
         )
-
-    def check_document_exists(self, new_document: LabelData) -> bool:
-        return new_document in self.documents
 
     def export_user_data(self, user_id: str) -> list[LabelData]:
-        return [doc for doc in self.documents if doc["user_id"] == user_id]
+        return [label_data for label_data in self.annotations if label_data["user_id"] == user_id]
 
-    def dump_all_data(self):
+    def dump_all_data(self, 
+            dump_file: str = "mercury_annotatins.json",
+            source_corpus_id: int = None, #TODO: include full-text source and summary in the dump
+            summary_corpus_id: int = None
+        ):
+        to_dump = [x._asdict() for x in self.annotations]
+        with open(dump_file, "w") as f:
+            f.write(json.dumps(to_dump, indent=2, sort_keys=True, ensure_ascii=False))
+                
         return self.documents
 
 
 if __name__ == "__main__":
-    database = Database()
-    import json
+    import argparse
 
-    from getter import get_full_documents
+    parser = argparse.ArgumentParser(
+        description="Dump all annotations from a Vectara corpus to a JSON file."
+    )
+    parser.add_argument("--annotation_corpus_id", type=int, required=True)
+    parser.add_argument("--dump_file", type=str, default="mercury_annotations.json")
+    args = parser.parse_args()
 
-    print("Dumping data to data.json")
-    source_id, summary_id, tasks = get_full_documents()
-
-    datas = []
-
-    for data in database.dump_all_data():
-        new_data = data.copy()
-        new_data["summary_label"] = tasks[data["task_index"]]["summary"][data["summary_start"] : data["summary_end"]]  # type: ignore
-        new_data["source_label"] = tasks[data["task_index"]]["source"][data["source_start"] : data["source_end"]]  # type: ignore
-        datas.append(new_data)
-
-    with open("data.json", "w") as f:
-        json.dump(datas, f, indent=4, ensure_ascii=False)
+    load_dotenv()
+    db = Database(args.annotation_corpus_id)
+    print (f"Dumping all data to {args.dump_file}")
+    db.dump_all_data(args.dump_file)
