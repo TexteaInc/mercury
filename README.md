@@ -3,33 +3,66 @@
 > [!NOTE]
 > WIP: This project is under active development
 
-An interface for data labeling, where the user can select two pieces of text from the article and summary, respectively, to label whether they match or not.
+Mercury is a semantic-assisted, cross-text text labeling tool. 
+1. semantic-assisted: when you select a text span, semantically related text segments will be highlighted -- so you don't have to eyebal through lengthy texts. 
+2. cross-text: you are labeling text spans from two different texts.
 
-We currently use Vectara for highlighting, where the backend can help highlight potentially relevant statements ahead of time as the user selects them, and differentiate the relevant levels by background color.
+Therefore, Mercury is very efficient for the labeling of NLP tasks that involve comparing texts between two documents which are also lengthy, such as hallucination detection or factual consistency/faithfulness in RAG systems. Semantic assistance not only saves time and reduces fatigues but also avoids mistakes. 
+
+Currently, Mercury only supports labeling inconsistencies between the source and summary for summarization in RAG. 
+
+Mercury is powered by Vectara's semantic search engine -- which is among the best in the industry, and all your data, including human-generated annotations are securely stored in Vectara's bullet-proof data infrastructure.
+
 
 ![Header](.github/header.png)
 
-## Usage
+## Usage 
 
 > [!NOTE]
 > You need Python and Node.js.
 
-As mentioned before, we use Vectara, you need to set the following environment variables first:
+0. Install dependencies
 
-- `VECTARA_CUSTOMER_ID`: In the vectara console, you can find it:
+   `pip3 install -r requirements.txt`
 
-    ![ID](.github/id.png)
+1. Set up your Vectara credentials 
 
-- `VECTARA_API_KEY`: You need create a personal api key ([click here](https://console.vectara.com/console/apiAccess/personalApiKey)), and copy it.
-- `MERCURY_FILE`: A CSV, JSON, or JSONL file containing at least two columns namely "source" and "summary".
+    As mentioned before, we use Vectara, you need to set the following environment variables first:
 
-You can also write the above environment variables to `.env`.
+    - `VECTARA_CUSTOMER_ID`: Find your customer ID in the Vectara console as below:
 
-Once everything is complete, you can start Mercury by following these steps:
+        ![ID](.github/id.png)
 
-1. `pip3 install -r requirements.txt`
-2. `python3 ingester.py` for data initing (if you don't use your own corpus, you need 3 corpuses for this project)
+    - `VECTARA_API_KEY`: Find or create your personal API key [here](https://console.vectara.com/console/apiAccess/personalApiKey).
+
+    You can also save the above environment variables to a `.env` file.
+
+2. Ingest data for labeling to Vectara
+
+   Run `python3 ingester.py -h` to see the options. 
+
+   The ingester takes a CSV, JSON, or JSONL file of two fields/columns for each sample: `source` and `summary`. Mercury uses three Vectara corpora to store the sources, the summaries, and the human annotations. You can provide the corpus IDs to overwrite or append data to existing corpora.
+
 3. `pnpm install && pnpm build` (if you don't have `pnpm` installed: `npm install -g pnpm`, you may need sudo)
 4. `python3 server.py`
 
 Do not run ingester.py unless you need to reset the database or the source/summary set; to export the database use `python3 database.py`.
+
+
+## Technical details
+
+For each dataset for labeling, Mercury uses three Vectara corpora: 
+1. Source
+2. Summary
+3. Annotation
+
+In summarization, a summary corresponds to a source. The source corpus is the opposite of the summary corpus. And vice versa.
+The three parts of a sample can be associated across the three corpora by a metedata field called `id`. 
+
+A source or a summary is a document in its corresponding corpus. Each sentence is a chunk in the document. Thus, each sentence is embedded into a vector. 
+
+For each sample, Mercury displays the source and the summary side by side. The user can select a text span from the source and the summary and label the inconsistency between them.
+
+When a text span is selected, Mercury uses Vectara's search engine to find semantically related text spans in the opposite corpus, e.g., selecting text in summary and searching in source. The related text spans are highlighted.
+
+The human annotations are stored like this...

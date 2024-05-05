@@ -70,9 +70,9 @@ const Tooltip = (props: {
           }}
           {...getFloatingProps()}
         >
-          {props.score <= 1 ? <Title3>Score: {props.score}</Title3> : <Title3>User select</Title3>}
+          {props.score <= 1 ? <Title3>Matchness: {props.score}</Title3> : <Title3>Labeling</Title3>}
           <br />
-          <Text as="p">Do the two texts metch</Text>
+          <Text as="p">Are the two texts consistent?</Text>
           <br />
           <div>
             <Button

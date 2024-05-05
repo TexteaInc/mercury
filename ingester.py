@@ -3,8 +3,9 @@ __all__ = ["read_file_into_corpus"]
 import json
 import os
 from enum import Enum
-from typing import TypedDict
+from typing import TypedDict, Tuple, List, Dict
 
+from tqdm.auto import tqdm
 import jsonlines
 import pandas
 import requests
@@ -56,14 +57,6 @@ class FullChunksWithMetadata(TypedDict):
 
 load_dotenv()
 
-
-def get_mercury_file_path() -> str:
-    path = os.environ.get("MERCURY_FILE", None)
-    if path is None:
-        raise Exception("MERCURY_FILE not found in environment variables")
-    return path
-
-
 class BetterVectara(vectara):
     def create_corpus_with_metadata_filters(
         self,
@@ -112,38 +105,42 @@ class BetterVectara(vectara):
 
 
 class Ingester:
-    client = BetterVectara()
+    def __init__(self, 
+                file_to_ingest: str,
+                source_corpus_id: int = None,
+                summary_corpus_id: int = None,
+                annotation_corpus_id: int = None, 
+                overwrite_corpora: bool = False
+                 ):
+        
+        vectara_client = BetterVectara()
+        self.vectara_client = vectara_client
+        self.file_path = file_to_ingest
+        
+        print ("Overwrite corpora is set to: ", overwrite_corpora)
 
-    def __init__(self):
-        self.file_path = get_mercury_file_path()
-        self.exports = []
-
-    def create_corpus(self) -> tuple[int, int]:
-        source_id = int(os.environ.get("MERCURY_SOURCE_ID", -1))
-        summary_id = int(os.environ.get("MERCURY_SUMMARY_ID", -1))
-        if source_id != -1 and summary_id != -1:
-            self.reset_corpus(source_id, summary_id)
-            return source_id, summary_id
+        # prepare three corpora for source, summary and annotation
+        if source_corpus_id is None: 
+            print ("Creating source corpus")
+            source_corpus_id = vectara_client.create_corpus("mercury_source")
+            print ("A new source corpus is created, with ID: ", source_corpus_id)
         else:
-            source_id = self.client.create_corpus("mercury_source")
-            summary_id = self.client.create_corpus("mercury_summary")
-            self.exports.append(f"MERCURY_SOURCE_ID={source_id}")
-            self.exports.append(f"MERCURY_SUMMARY_ID={summary_id}")
-            assert isinstance(source_id, int) and isinstance(summary_id, int)
-            if source_id and summary_id:
-                return source_id, summary_id
-            else:
-                raise Exception("Failed to create corpus")
+            if overwrite_corpora:
+                print (f"Resetting source corpus with ID: {source_corpus_id}")
+                vectara_client.reset_corpus(source_corpus_id)
 
-    def create_database(self) -> int:
-        database_id = int(os.environ.get("MERCURY_DATABASE_ID", -1))
-        if database_id != -1:
-            self.client.reset_corpus(database_id)
-            return database_id
-        else:
-            self.exports.append(f"MERCURY_DATABASE_ID={database_id}")
-            database_id = self.client.create_corpus_with_metadata_filters(
-                "mercury_database",
+        if summary_corpus_id is None:
+            print ("Creating summary corpus")
+            summary_corpus_id = vectara_client.create_corpus("mercury_summary")
+            print ("A new summary corpus is created, with ID: ", summary_corpus_id)
+        else: 
+            if overwrite_corpora:
+                print (f"Resetting summary corpus with ID: {summary_corpus_id}")
+                vectara_client.reset_corpus(summary_corpus_id)
+
+        if annotation_corpus_id is None:
+            annotation_corpus_id = vectara_client.create_corpus_with_metadata_filters(
+                "mercury_annotation",
                 metadata_filters=[
                     {
                         "name": "user_id",
@@ -165,15 +162,62 @@ class Ingester:
                     },
                 ],
             )
-            assert isinstance(database_id, int)
-            if database_id:
-                return database_id
-            else:
-                raise Exception("Failed to create database")
+            print ("A new annotation corpus is created, with ID: ", annotation_corpus_id)
+        else:
+            if overwrite_corpora:
+                #TODO: Check whether the resetting corpus has the same metadata filters. If not, just add the metadata filters. 
+                print (f"Resetting annotation corpus with ID: {annotation_corpus_id}")
+                vectara_client.reset_corpus(annotation_corpus_id)
 
-    def reset_corpus(self, source_id: int, summary_id: int):
-        self.client.reset_corpus(source_id)
-        self.client.reset_corpus(summary_id)
+        self.source_corpus_id = source_corpus_id
+        self.summary_corpus_id = summary_corpus_id
+        self.annotation_corpus_id = annotation_corpus_id
+        self.exports = []
+
+    def load_data_for_ingestion(self)-> Tuple[List[str], List[str]]:
+        # if  file_to_inges ends with JSONL, load the it as JSONL
+        if self.file_path.endswith("jsonl"):
+            df = pandas.read_json(self.file_path, lines=True)
+        elif self.file_path.endswith("json"): 
+            df = pandas.read_json(self.file_path)
+        elif self.file_path.endswith("csv"):
+            df = pandas.read_csv(self.file_path)
+        else: 
+            raise Exception(f"Unsupported file format in {self.file_path}")
+
+        sources = df["source"].tolist()
+        summaries = df["summary"].tolist()
+
+        self.sources = sources
+        self.summaries = summaries
+        return sources, summaries
+
+    def ingest_to_corpora(self):
+        sources, summaries = self.load_data_for_ingestion()
+        schemas = []
+        for index, (source, summary) in tqdm(enumerate(zip(sources, summaries)), total=len(sources), desc="Ingesting data to Vectara"):
+            id_ = f"mercury_{index}"
+            for column in ["source", "summary"]:
+                # The name "column" does not indicate the column name, but the type of text
+                text = source if column == "source" else summary
+                corpus_id = self.source_corpus_id if column == "source" else self.summary_corpus_id
+                text_info = self.split_text_into_chunks(text)
+                self.vectara_client.create_document_from_chunks(
+                    corpus_id=corpus_id,
+                    chunks=text_info["chunks"],
+                    chunk_metadata=text_info["chunk_metadata"],  
+                    doc_id=id_,
+                    doc_metadata={"type": column, "full": text},
+                )
+                schemas.append(
+                    {
+                        "_id": id_,
+                        "source": source,
+                        "summary": summary,
+                    }
+                )
+        self.schemas = schemas
+        #TODO: What is schemas for? 
 
     # def split_text_into_sections(self, text: str) -> list[SectionSlice]:
     #     section = []
@@ -222,136 +266,33 @@ class Ingester:
             "full_doc_len": full_doc_len,
             "chunks": strings,
         }
-
-    def read_jsonl_into_corpus(self) -> tuple[int, int, list[Schema]]:
-        source_id, summary_id = self.create_corpus()
-        schemas = []
-        with open(self.file_path, "r+", encoding="utf-8") as f:
-            for index, item in enumerate(jsonlines.Reader(f)):
-                source = item["source"]
-                summary = item["summary"]
-                id_ = f"mercury_{index}"
-                source_info = self.split_text_into_chunks(source)
-                self.client.create_document_from_chunks(
-                    corpus_id=source_id,
-                    chunks=source_info["chunks"],
-                    chunk_metadata=source_info["chunk_metadata"],  # type: ignore
-                    doc_id=id_,
-                    doc_metadata={"type": "source", "full": source},
-                )
-                summary_info = self.split_text_into_chunks(summary)
-                self.client.create_document_from_chunks(
-                    corpus_id=summary_id,
-                    chunks=summary_info["chunks"],
-                    chunk_metadata=summary_info["chunk_metadata"],  # type: ignore
-                    doc_id=id_,
-                    doc_metadata={"type": "summary", "full": summary},
-                )
-                schemas.append(
-                    {
-                        "_id": id_,
-                        "source": source,
-                        "summary": summary,
-                    }
-                )
-        return source_id, summary_id, schemas
-
-    def read_json_into_corpus(self) -> tuple[int, int, list[Schema]]:
-        source_id, summary_id = self.create_corpus()
-        schemas = []
-        with open(self.file_path, "r+", encoding="utf-8") as f:
-            data: list[dict] = json.load(f)
-            for index, item in enumerate(data):
-                source = item["source"]
-                summary = item["summary"]
-                id_ = f"mercury_{index}"
-                source_info = self.split_text_into_chunks(source)
-                self.client.create_document_from_chunks(
-                    corpus_id=source_id,
-                    chunks=source_info["chunks"],
-                    chunk_metadata=source_info["chunk_metadata"],  # type: ignore
-                    doc_id=id_,
-                    doc_metadata={"type": "source", "full": source},
-                )
-                summary_info = self.split_text_into_chunks(summary)
-                self.client.create_document_from_chunks(
-                    corpus_id=summary_id,
-                    chunks=summary_info["chunks"],
-                    chunk_metadata=summary_info["chunk_metadata"],  # type: ignore
-                    doc_id=id_,
-                    doc_metadata={"type": "summary", "full": summary},
-                )
-                schemas.append(
-                    {
-                        "_id": id_,
-                        "source": source,
-                        "summary": summary,
-                    }
-                )
-        return source_id, summary_id, schemas
-
-    def read_csv_into_corpus(self) -> tuple[int, int, list[Schema]]:
-        source_id, summary_id = self.create_corpus()
-        schemas = []
-        csv_data = pandas.read_csv(self.file_path)
-        for index, item in csv_data.iterrows():
-            source = item["source"]
-            summary = item["summary"]
-            id_ = f"mercury_{index}"
-            source_info = self.split_text_into_chunks(source)
-            self.client.create_document_from_chunks(
-                corpus_id=source_id,
-                chunks=source_info["chunks"],
-                chunk_metadata=source_info["chunk_metadata"],  # type: ignore
-                doc_id=id_,
-                doc_metadata={"type": "source", "full": source},
-                verbose=True,
-            )
-            summary_info = self.split_text_into_chunks(summary)
-            self.client.create_document_from_chunks(
-                corpus_id=summary_id,
-                chunks=summary_info["chunks"],
-                chunk_metadata=summary_info["chunk_metadata"],  # type: ignore
-                doc_id=id_,
-                doc_metadata={"type": "summary", "full": summary},
-                verbose=True,
-            )
-            schemas.append(
-                {
-                    "_id": id_,
-                    "source": source,
-                    "summary": summary,
-                }
-            )
-        return source_id, summary_id, schemas
-
-    def read_file_into_corpus(self) -> tuple[int, int, list[Schema]]:
-        file_extension = self.file_path.split(".")[-1].lower()
-        if file_extension.endswith("jsonl"):
-            return self.read_jsonl_into_corpus()
-        elif file_extension.endswith("json"):
-            return self.read_json_into_corpus()
-        elif file_extension.endswith("csv"):
-            return self.read_csv_into_corpus()
-        else:
-            raise Exception("Unsupported file format")
-
-
-def read_file_into_corpus() -> tuple[int, int, list[Schema]]:
-    ingester = Ingester()
-    return ingester.read_file_into_corpus()
-
+    
+    def main(self): # or become __call__
+        return self.ingest_to_corpora()
 
 if __name__ == "__main__":
-    ingester = Ingester()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("file_to_ingest", type=str, help="Path to the file to ingest")
+    parser.add_argument("--source_corpus_id", type=int, help="Source Corpus ID", default=None)
+    parser.add_argument("--summary_corpus_id", type=int, help="Summary Corpus ID", default=None)
+    parser.add_argument("--annotation_corpus_id", type=int, help="Annotation Corpus ID", default=None)
+    parser.add_argument("--overwrite_corpora", action="store_true", help="Whether to overwrite existing corpora")
+    args = parser.parse_args()
+
     print("Uploading data to Vectara...")
-    source_id, summary_id, schemas = ingester.read_file_into_corpus()
-    print(f"Uploaded {len(schemas)} documents to Vectara")
-    database_id = ingester.create_database()
-    print(f"Source Corpus ID: {source_id}")
-    print(f"Summary Corpus ID: {summary_id}")
-    print(f"Database Corpus ID: {database_id}")
-    if ingester.exports:
-        print("Please add the following lines to your .env file:")
-        for export in ingester.exports:
-            print(export)
+    ingester = Ingester(
+        file_to_ingest=args.file_to_ingest,
+        source_corpus_id=args.source_corpus_id,
+        summary_corpus_id=args.summary_corpus_id,
+        annotation_corpus_id=args.annotation_corpus_id,
+        overwrite_corpora=args.overwrite_corpora
+    )
+    ingester.main()
+
+    print(f"Uploaded {len(ingester.schemas)} documents to Vectara")
+
+    print ("Please add the folloiwing lines to your .env file:")
+    print(f"SOURCE_CORPUS_ID={ingester.source_corpus_id}")
+    print(f"SUMMARY_CORPUS_ID={ingester.summary_corpus_id}")
+    print(f"ANNOTATION_CORPUS_ID={ingester.annotation_corpus_id}")  

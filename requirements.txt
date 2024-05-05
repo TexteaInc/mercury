@@ -4,3 +4,4 @@ jsonlines
 python-dotenv
 uvicorn
 pandas
+tqdm
