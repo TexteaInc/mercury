@@ -370,7 +370,7 @@ export default function Index() {
             <CardHeader
               header={
                 <Body1>
-                  <strong>Doc</strong>
+                  <strong>Source</strong>
                 </Body1>
               }
             />
