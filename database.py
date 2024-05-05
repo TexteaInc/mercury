@@ -110,4 +110,4 @@ if __name__ == "__main__":
         datas.append(new_data)
 
     with open("data.json", "w") as f:
-        json.dump(datas, f, indent=4, sort_keys=True, ensure_ascii=False)
+        json.dump(datas, f, indent=4, ensure_ascii=False)
