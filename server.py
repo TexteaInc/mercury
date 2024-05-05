@@ -50,7 +50,7 @@ async def create_new_user():
 
 @app.get("/user/export")
 async def export_user_data(user_key: Annotated[str, Header()]):
-    if user_key.startswith("\"") and user_key.endswith("\""):
+    if user_key.startswith('"') and user_key.endswith('"'):
         user_key = user_key[1:-1]
     return database.export_user_data(user_key)
 
@@ -70,7 +70,7 @@ async def get_task(task_index: int = 0):
 
 @app.post("/task/{task_index}/label")
 async def post_task(task_index: int, label: Label, user_key: Annotated[str, Header()]):
-    if user_key.startswith("\"") and user_key.endswith("\""):
+    if user_key.startswith('"') and user_key.endswith('"'):
         user_key = user_key[1:-1]
     database.push_new_document(
         {

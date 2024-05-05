@@ -26,12 +26,12 @@ class Getter:
     def __init__(self):
         load_dotenv()
         self.client = vectara.vectara()
-        self.source_id = int(os.environ.get("MERCURY_SOURCE_ID", -1))
-        self.summary_id = int(os.environ.get("MERCURY_SUMMARY_ID", -1))
+        self.source_id = int(os.environ.get("SOURCE_CORPUS_ID", -1))
+        self.summary_id = int(os.environ.get("SUMMARY_CORPUS_ID", -1))
         if self.source_id == -1 or self.summary_id == -1:
             print("Failed to get corpus id")
             print(
-                "Please set MERCURY_SOURCE_ID and MERCURY_SUMMARY_ID later in the .env file"
+                "Please set SOURCE_CORPUS_ID and SUMMARY_CORPUS_ID later in the .env file"
             )
             self.source_id = int(input("Enter source corpus id (temp): "))
             self.summary_id = int(input("Enter summary corpus id (temp): "))
