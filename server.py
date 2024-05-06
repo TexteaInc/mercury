@@ -1,15 +1,15 @@
-import uuid
-from typing import Annotated, List, Dict
 import os
+import uuid
+from typing import Annotated, Dict, List
 
 import uvicorn
-from better_vectara import BetterVectara as Vectara
 from dotenv import load_dotenv
 from fastapi import FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
+from better_vectara import BetterVectara as Vectara
 from database import Database, LabelData
 
 load_dotenv()
@@ -23,40 +23,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 vectara_client = Vectara()
-database = Database()
+
 
 ##### Prepare corpus IDs #####
-try: 
-    source_corpus_id = os.environ["SOURCE_CORPUS_ID"]
+try:
+    source_corpus_id = int(os.environ["SOURCE_CORPUS_ID"])
 except KeyError:
-    source_corpus_id = int(input("No source corpus ID found in .env file. Please provide a source corpus id: "))
+    source_corpus_id = int(
+        input(
+            "No source corpus ID found in .env file. Please provide a source corpus id: "
+        )
+    )
 
 try:
-    summary_corpus_id = os.environ["SUMMARY_CORPUS_ID"]
+    summary_corpus_id = int(os.environ["SUMMARY_CORPUS_ID"])
 except KeyError:
-    summary_corpus_id = int(input("No summary corpus ID found in .env file. Please provide a summar y corpus id: "))
+    summary_corpus_id = int(
+        input(
+            "No summary corpus ID found in .env file. Please provide a summar y corpus id: "
+        )
+    )
 
-try: 
-    annotation_corpus_id = os.environ["ANNOTATION_CORPUS_ID"]
+try:
+    annotation_corpus_id = int(os.environ["ANNOTATION_CORPUS_ID"])
 except KeyError:
-    annotation_corpus_id = int(input("No annotation corpus ID found in .env file. Please provide an annotation corpus id: "))
+    annotation_corpus_id = int(
+        input(
+            "No annotation corpus ID found in .env file. Please provide an annotation corpus id: "
+        )
+    )
 ##### End of preparing corpus IDs #####
+
+database = Database(annotation_corpus_id)
+
 
 def fetch_data_for_labeling(source_corpus_id, summary_corpus_id):
     """Fetch the source-summary pairs for labeling from Vectara server."""
-    data_for_labeling: List[Dict]  = []
+    data_for_labeling = {}
     for doc_type in ["source", "summary"]:
         corpus_id = source_corpus_id if doc_type == "source" else summary_corpus_id
-        for doc in Vectara.list_all_documents(corpus_id):
+        for doc in vectara_client.list_all_documents(corpus_id):
             id_ = doc["id"]
-            text = doc["metadata"]["text"] # if "text" is not in metadata, something is wrong in ingestion. 
+            for metadata in doc["metadata"]:
+                if metadata["name"] == "text":
+                    text = metadata["value"]
             data_for_labeling.setdefault(id_, {})[doc_type] = text
 
     data_for_labeling = [{"_id": k, **v} for k, v in data_for_labeling.items()]
     return data_for_labeling
 
+
 tasks = fetch_data_for_labeling(source_corpus_id, summary_corpus_id)
-# TODO: the name 'tasks' can be misleading. It should be changed to something more descriptive. 
+# TODO: the name 'tasks' can be misleading. It should be changed to something more descriptive.
+
 
 class Label(BaseModel):
     summary_start: int
@@ -103,14 +122,14 @@ async def post_task(task_index: int, label: Label, user_key: Annotated[str, Head
         user_key = user_key[1:-1]
 
     label_data = LabelData(
-        tasks[task_index]["_id"],
-        label.summary_start,
-        label.summary_end,
-        label.source_start,
-        label.source_end,
-        label.consistent,
-        task_index,
-        user_key,
+        sample_id=tasks[task_index]["_id"],
+        summary_start=label.summary_start,
+        summary_end=label.summary_end,
+        source_start=label.source_start,
+        source_end=label.source_end,
+        consistent=label.consistent,
+        task_index=task_index,
+        user_id=user_key,
     )
     database.push_annotation(label_data)
     return {"message": "success"}
