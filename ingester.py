@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import Dict, List, Tuple, TypedDict
+from typing import Dict, List, Literal, Tuple, TypedDict
 
 import pandas
 import requests
@@ -54,6 +54,73 @@ class FullChunksWithMetadata(TypedDict):
 
 load_dotenv()
 
+annotation_metadata_filters = [
+    {
+        "name": "user_id",
+        "indexed": True,
+        "type": FilterAttributeType.TEXT,
+        "level": FilterAttributeLevel.DOCUMENT,
+    },
+    {
+        "name": "sample_id",
+        "indexed": True,
+        "type": FilterAttributeType.TEXT,
+        "level": FilterAttributeLevel.DOCUMENT,
+    },
+    {
+        "name": "summary_start",
+        "indexed": True,
+        "type": FilterAttributeType.INTEGER,
+        "level": FilterAttributeLevel.DOCUMENT,
+    },
+    {
+        "name": "summary_end",
+        "indexed": True,
+        "type": FilterAttributeType.INTEGER,
+        "level": FilterAttributeLevel.DOCUMENT,
+    },
+    {
+        "name": "source_start",
+        "indexed": True,
+        "type": FilterAttributeType.INTEGER,
+        "level": FilterAttributeLevel.DOCUMENT,
+    },
+    {
+        "name": "source_end",
+        "indexed": True,
+        "type": FilterAttributeType.INTEGER,
+        "level": FilterAttributeLevel.DOCUMENT,
+    },
+    {
+        "name": "consistent",
+        "indexed": True,
+        "type": FilterAttributeType.BOOLEAN,
+        "level": FilterAttributeLevel.DOCUMENT,
+    },
+]
+
+
+class CheckItem(TypedDict):
+    type_: Literal["text", "float", "int", "bool"]
+    has: bool
+
+
+def create_annotation_metadata_check_dict() -> Dict[str, CheckItem]:
+    check_dict = {}
+    for annotation_metadata_filter in annotation_metadata_filters:
+        match annotation_metadata_filter["type"]:
+            case FilterAttributeType.TEXT:
+                type_ = "text"
+            case FilterAttributeType.INTEGER:
+                type_ = "int"
+            case FilterAttributeType.BOOLEAN:
+                type_ = "bool"
+            case _:
+                type_ = "text"
+
+        check_dict[annotation_metadata_filter["name"]] = {"type_": type_, "has": False}
+    return check_dict
+
 
 class Ingester:
     def __init__(
@@ -96,20 +163,7 @@ class Ingester:
         if annotation_corpus_id is None:
             annotation_corpus_id = vectara_client.create_corpus_with_metadata_filters(
                 "mercury_annotation",
-                metadata_filters=[
-                    {
-                        "name": "user_id",
-                        "indexed": True,
-                        "type": FilterAttributeType.TEXT,
-                        "level": FilterAttributeLevel.DOCUMENT,
-                    },
-                    {
-                        "name": "sample_id",
-                        "indexed": True,
-                        "type": FilterAttributeType.TEXT,
-                        "level": FilterAttributeLevel.DOCUMENT,
-                    }
-                ],
+                metadata_filters=annotation_metadata_filters,
             )
             print("A new annotation corpus is created, with ID: ", annotation_corpus_id)
         else:
@@ -121,31 +175,20 @@ class Ingester:
                     [annotation_corpus_id], read_filter_attributes=True
                 )
                 metadata_filters = response["corpora"][0]["filterAttribute"]
-                check_list = {
-                    "raw_request": False,
-                    "task_id": False,
-                    "user_id": False,
-                }
+                check_list = create_annotation_metadata_check_dict()
                 for metadata_filter in metadata_filters:
-                    if (
-                        metadata_filter["name"] in check_list
-                        and metadata_filter["type"] == FilterAttributeType.TEXT.value
-                        and metadata_filter["level"]
-                        == FilterAttributeLevel.DOCUMENT.value
-                    ):
-                        check_list[metadata_filter["name"]] = True
-                if not all(check_list.values()):
-                    print("Replacing metadata filters for corpus", annotation_corpus_id)
-                    for name, checked in check_list.items():
-                        if not checked:
-                            print("Adding metadata filter for", name)
-                            vectara_client.add_corpus_filters(
-                                corpus_id=annotation_corpus_id,
-                                name=name,
-                                description="",
-                                type="text",
-                                level="document",
-                            )
+                    if metadata_filter["name"] in check_list:
+                        check_list[metadata_filter["name"]]["has"] = True
+                for name, check_item in check_list.items():
+                    if not check_item["has"]:
+                        print("Adding metadata filter for", name)
+                        vectara_client.add_corpus_filters(
+                            corpus_id=annotation_corpus_id,
+                            name=name,
+                            description="",
+                            type=check_item["type_"],
+                            level="document",
+                        )
 
         self.source_corpus_id = source_corpus_id
         self.summary_corpus_id = summary_corpus_id
@@ -171,7 +214,6 @@ class Ingester:
 
     def ingest_to_corpora(self):
         sources, summaries = self.load_data_for_ingestion()
-        schemas = []
         for index, (source, summary) in tqdm(
             enumerate(zip(sources, summaries)),
             total=len(sources),
@@ -262,11 +304,7 @@ if __name__ == "__main__":
         return None
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "file_to_ingest",
-        type=str,
-        help="Path to the file to ingest"
-    )
+    parser.add_argument("file_to_ingest", type=str, help="Path to the file to ingest")
     parser.add_argument(
         "--source_corpus_id",
         type=int,
@@ -302,9 +340,13 @@ if __name__ == "__main__":
     )
     ingester.main()
 
-    print(f"Uploaded {len(ingester.schemas)} documents to Vectara")
+    print(f"Uploaded!")
 
-    if not args.source_corpus_id or not args.summary_corpus_id or not args.annotation_corpus_id:
+    if (
+        not args.source_corpus_id
+        or not args.summary_corpus_id
+        or not args.annotation_corpus_id
+    ):
         print("Please add the folloiwing lines to your .env file:")
         if not args.source_corpus_id:
             print(f"SOURCE_CORPUS_ID={ingester.source_corpus_id}")

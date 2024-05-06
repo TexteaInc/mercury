@@ -53,7 +53,7 @@ For each dataset for labeling, Mercury uses three Vectara corpora:
 
 1. Source
 2. Summary
-3. Annotation -- no text data. metadata is used to store the human annotations. 
+3. Annotation -- no text data. metadata is used to store the human annotations.
 
 In summarization, a summary corresponds to a source. The source corpus is the opposite of the summary corpus. And vice versa.
 The three parts of a sample can be associated across the three corpora by a metedata field called `id`.
@@ -64,7 +64,7 @@ For each sample, Mercury displays the source and the summary side by side. The u
 
 When a text span is selected, Mercury uses Vectara's search engine to find semantically related text spans in the opposite corpus, e.g., selecting text in summary and searching in source. The related text spans are highlighted.
 
-The dumped human annotations are stored in a JSON format like this: 
+The dumped human annotations are stored in a JSON format like this:
 
 ```python
 [

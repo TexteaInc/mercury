@@ -1,9 +1,11 @@
-# Features that Forrest's vectara Python SDK does not provide 
-# TO be added to the Vectara Python SDK shortly 
+# Features that Forrest's vectara Python SDK does not provide
+# TO be added to the Vectara Python SDK shortly
+import json
+from typing import Any
 
 import requests
+from vectara import vectara
 
-from vectara import vectara 
 
 class BetterVectara(vectara):
     def read_corpus(
@@ -81,12 +83,44 @@ class BetterVectara(vectara):
             return response.json()["corpusId"]
         else:
             raise Exception(f"Failed to create corpus: {response.text}")
-        
 
-    def list_all_documents(self, corpus_id: int):
+    def list_documents_with_filter(
+        self,
+        corpus_id: int,
+        numResults: int = 10,
+        pageKey: str | None = None,
+        metadataFilter: str | None = None,
+    ) -> dict:
+        url = f"{self.base_url}/v1/list-documents"
+
+        headers = {}
+
+        if self.api_key:
+            headers["x-api-key"] = self.api_key
+        else:
+            headers["Authorization"] = f"Bearer {self.jwt_token}"
+
+        payload: dict[str, Any] = {"corpusId": corpus_id, "numResults": numResults}
+
+        if pageKey:
+            payload["pageKey"] = pageKey
+
+        if metadataFilter:
+            payload["metadataFilter"] = metadataFilter
+
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+
+        return response.json()
+
+    def list_all_documents(self, corpus_id: int, metadataFilter: str | None = None):
         pageKey: str | None = None
         while True:
-            page = self.list_documents(corpus_id, numResults=1000, pageKey=pageKey)
+            page = self.list_documents_with_filter(
+                corpus_id,
+                numResults=1000,
+                pageKey=pageKey,
+                metadataFilter=metadataFilter,
+            )
             if page["document"] == []:
                 yield from page["document"]
                 break
