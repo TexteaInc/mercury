@@ -52,11 +52,7 @@ const updateSliceArray = (text: string, slices: SectionResponse): [number, numbe
   const sliceArray: [number, number, boolean, number, number][] = []
   for (let i = 0; i < slices.length; i++) {
     const slice = slices[i]
-    if (slice.score === 2) {
-      sliceArray.push([slice.offset, slice.offset + slice.len - 1, false, slice.score, i])
-    } else {
-      sliceArray.push([slice.offset, slice.offset + slice.len - 1, true, slice.score, i])
-    }
+    sliceArray.push([slice.offset, slice.offset + slice.len - 1, true, slice.score, i])
   }
   sliceArray.sort((a, b) => a[0] - b[0])
   const newSliceArray: [number, number, boolean, number, number][] = []
@@ -73,7 +69,6 @@ const updateSliceArray = (text: string, slices: SectionResponse): [number, numbe
   if (newSliceArray[0][0] !== 0) {
     newSliceArray.unshift([0, newSliceArray[0][0] - 1, false, 0, -1])
   }
-
   return newSliceArray
 }
 

@@ -153,7 +153,7 @@ export default function Index() {
         .catch(error => {
           console.error(error)
         })
-    }, 500)()
+    }, 100)()
   }, [firstRange, rangeId, labelIndex])
 
   const washHand = () => {
@@ -194,7 +194,6 @@ export default function Index() {
         ? props.slices
         : [userSectionResponse(props.user[0], props.user[1], rangeId === "summary")]
     const sliceArray = updateSliceArray(props.text, newSlices)
-    console.log(sliceArray)
     const allScore = []
     for (const slice of newSlices) {
       allScore.push(slice.score)
@@ -205,7 +204,7 @@ export default function Index() {
         {sliceArray.map(slice => {
           const isBackendSlice = slice[2]
           const score = slice[3]
-          const color = slice[2] ? getColor(normalColor[slice[4]]) : score === 2 ? "#85e834" : "#ffffff"
+          const color = isBackendSlice ? score === 2 ? "#85e834" : getColor(normalColor[slice[4]]) : "#ffffff"
           return isBackendSlice ? (
             <Tooltip
               start={slice[0]}
