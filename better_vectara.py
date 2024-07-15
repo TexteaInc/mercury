@@ -4,10 +4,10 @@ import json
 from typing import Any
 
 import requests
-from vectara import vectara
+from vectara import Vectara
 
 
-class BetterVectara(vectara):
+class BetterVectara(Vectara):
     def read_corpus(
         self,
         corpusIds: list[int],
