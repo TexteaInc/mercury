@@ -5,4 +5,4 @@ python-dotenv
 uvicorn
 pandas
 tqdm
-vectara
+vectara==0.0.5
