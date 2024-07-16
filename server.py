@@ -40,7 +40,7 @@ try:
 except KeyError:
     summary_corpus_id = int(
         input(
-            "No summary corpus ID found in .env file. Please provide a summar y corpus id: "
+            "No summary corpus ID found in .env file. Please provide a summary corpus id: "
         )
     )
 
