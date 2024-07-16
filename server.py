@@ -155,7 +155,7 @@ async def post_selections(task_index: int, selection: Selection):
         # TODO: Please all users to select k value via a sliding bar
         lang="auto",
         metadata_filter=f"doc.id = '{id_}'",
-        return_summary=False,
+        do_generation=False,
     )
     selections = []
     for i in response["responseSet"][0]["response"]:
