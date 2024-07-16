@@ -51,6 +51,7 @@ class FullChunksWithMetadata(TypedDict):
     chunks: list[str]
     chunk_metadata: list[OwnChunk]
 
+from vectara.data_types import Filter
 
 load_dotenv()
 
@@ -101,7 +102,7 @@ annotation_metadata_filters = [
 
 
 class CheckItem(TypedDict):
-    type_: Literal["text", "float", "int", "bool"]
+    type_: Literal["str", "float", "int", "bool"]
     has: bool
 
 
@@ -110,13 +111,13 @@ def create_annotation_metadata_check_dict() -> Dict[str, CheckItem]:
     for annotation_metadata_filter in annotation_metadata_filters:
         match annotation_metadata_filter["type"]:
             case FilterAttributeType.TEXT:
-                type_ = "text"
+                type_ = "str"
             case FilterAttributeType.INTEGER:
                 type_ = "int"
             case FilterAttributeType.BOOLEAN:
                 type_ = "bool"
             case _:
-                type_ = "text"
+                type_ = "str"
 
         check_dict[annotation_metadata_filter["name"]] = {"type_": type_, "has": False}
     return check_dict
@@ -182,12 +183,15 @@ class Ingester:
                 for name, check_item in check_list.items():
                     if not check_item["has"]:
                         print("Adding metadata filter for", name)
-                        vectara_client.add_corpus_filters(
+                        a_filter = Filter(
+                            name=name, 
+                            description = "",
+                            type = check_item["type_"],
+                            level = "doc"
+                        )
+                        vectara_client.set_corpus_filters(
                             corpus_id=annotation_corpus_id,
-                            name=name,
-                            description="",
-                            type=check_item["type_"],
-                            level="document",
+                            filters = [a_filter]
                         )
 
         self.source_corpus_id = source_corpus_id
@@ -204,6 +208,8 @@ class Ingester:
             df = pandas.read_csv(self.file_path)
         else:
             raise Exception(f"Unsupported file format in {self.file_path}")
+        
+        df.columns = df.columns.str.lower()
 
         sources = df["source"].tolist()
         summaries = df["summary"].tolist()
