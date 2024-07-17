@@ -70,6 +70,7 @@ def fetch_data_for_labeling(source_corpus_id, summary_corpus_id):
             data_for_labeling.setdefault(id_, {})[doc_type] = text
 
     data_for_labeling = [{"_id": k, **v} for k, v in data_for_labeling.items()]
+    data_for_labeling.sort(key=lambda x: int(x["_id"].split("_")[1]))
     return data_for_labeling
 
 
