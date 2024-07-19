@@ -1,9 +1,11 @@
 import type { AllTasksLength, LabelData, LabelRequest, Normal, SectionResponse, SelectionRequest, Task } from "./types"
 
+const backend = process.env.NEXT_PUBLIC_BACKEND || "";
+
 const getKey = (): Promise<string> => {
   const key = localStorage.getItem("key")
   if (key === "" || key === null) {
-    return fetch("/user/new")
+    return fetch(`${backend}/user/new`)
       .then(response => response.json())
       .then(data => {
         localStorage.setItem("key", data.key)
@@ -14,7 +16,7 @@ const getKey = (): Promise<string> => {
 }
 
 const getAllTasksLength = (): Promise<AllTasksLength> => {
-  return fetch("/task")
+  return fetch(`${backend}/task`)
     .then(response => response.json())
     .then(data => {
       return data as AllTasksLength
@@ -22,7 +24,7 @@ const getAllTasksLength = (): Promise<AllTasksLength> => {
 }
 
 const getSingleTask = (taskIndex: number): Promise<Task | Error> => {
-  return fetch(`/task/${taskIndex}`)
+  return fetch(`${backend}/task/${taskIndex}`)
     .then(response => response.json())
     .then(data => {
       return data as Task | Error
@@ -30,7 +32,7 @@ const getSingleTask = (taskIndex: number): Promise<Task | Error> => {
 }
 
 const selectText = (taskIndex: number, req: SelectionRequest): Promise<SectionResponse | Error> => {
-  return fetch(`/task/${taskIndex}/select`, {
+  return fetch(`${backend}/task/${taskIndex}/select`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -45,7 +47,7 @@ const selectText = (taskIndex: number, req: SelectionRequest): Promise<SectionRe
 
 const labelText = (taskIndex: number, req: LabelRequest): Promise<Normal> => {
   return getKey().then(key => {
-    return fetch(`/task/${taskIndex}/label`, {
+    return fetch(`${backend}/task/${taskIndex}/label`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -62,7 +64,7 @@ const labelText = (taskIndex: number, req: LabelRequest): Promise<Normal> => {
 
 const exportLabel = (): Promise<LabelData[]> => {
   return getKey().then(key => {
-    return fetch("/user/export", {
+    return fetch(`${backend}/user/export`, {
       headers: {
         "User-Key": key,
       },

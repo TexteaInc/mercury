@@ -1,6 +1,7 @@
 import os
+import sys
 import uuid
-from typing import Annotated, Dict, List
+from typing import Annotated
 
 import uvicorn
 from dotenv import load_dotenv
@@ -180,7 +181,9 @@ async def post_selections(task_index: int, selection: Selection):
     return selections
 
 
-app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
+
 
 if __name__ == "__main__":
+    if "-d" not in sys.argv:
+        app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
     uvicorn.run(app, port=8000)

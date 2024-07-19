@@ -1,8 +1,7 @@
 "use client"
 import { FluentProvider, webLightTheme } from "@fluentui/react-components"
-import dynamic from "next/dynamic"
 
-function RootLayout({ children }) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
@@ -29,6 +28,6 @@ function RootLayout({ children }) {
   )
 }
 
-export default dynamic(() => Promise.resolve(RootLayout), {
-  ssr: false,
-})
+// export default dynamic(() => Promise.resolve(RootLayout), {
+//   ssr: false,
+// })
