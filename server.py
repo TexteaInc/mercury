@@ -10,10 +10,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
+load_dotenv()
+
 from better_vectara import BetterVectara as Vectara
 from database import Database, LabelData
 
-load_dotenv()
 
 app = FastAPI()
 app.add_middleware(

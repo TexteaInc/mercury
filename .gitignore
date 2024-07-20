@@ -51,3 +51,6 @@ dump_small.py
 data.json
 
 mercury_annotations.json
+
+.venv
+.idea

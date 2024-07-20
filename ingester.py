@@ -132,6 +132,8 @@ class Ingester:
         annotation_corpus_id: int | None = None,
         overwrite_corpora: bool = False,
     ):
+        self.sources = None
+        self.summaries = None
         vectara_client = Vectara()
         self.vectara_client = vectara_client
         self.file_path = file_to_ingest
@@ -199,7 +201,7 @@ class Ingester:
         self.annotation_corpus_id = annotation_corpus_id
 
     def load_data_for_ingestion(self) -> Tuple[List[str], List[str]]:
-        # if  file_to_inges ends with JSONL, load the it as JSONL
+        # if file_to_ingest ends with JSONL, load it as JSONL
         if self.file_path.endswith("jsonl"):
             df = pandas.read_json(self.file_path, lines=True)
         elif self.file_path.endswith("json"):
@@ -353,7 +355,7 @@ if __name__ == "__main__":
         or not args.summary_corpus_id
         or not args.annotation_corpus_id
     ):
-        print("Please add the folloiwing lines to your .env file:")
+        print("Please add the following lines to your .env file:")
         if not args.source_corpus_id:
             print(f"SOURCE_CORPUS_ID={ingester.source_corpus_id}")
         if not args.summary_corpus_id:

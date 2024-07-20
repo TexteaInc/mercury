@@ -8,7 +8,7 @@ import Link from "next/link"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import Tooltip from "../components/tooltip"
 import { updateSliceArray } from "../utils/mergeArray"
-import getRangeTextHandlableRange from "../utils/rangeTextNodes"
+import getRangeTextHandleableRange from "../utils/rangeTextNodes"
 import { exportLabel, getAllTasksLength, getSingleTask, labelText, selectText } from "../utils/request"
 import { type SectionResponse, type Task, userSectionResponse } from "../utils/types"
 
@@ -19,7 +19,7 @@ enum Stage {
   First = 1,
 }
 
-const DISBALE_QUERY = false
+const DISABLE_QUERY = false
 
 const normalizationColor = (score: number[]) => {
   const minScore = Math.min(...score)
@@ -56,7 +56,7 @@ export default function Index() {
   const [rangeId, setRangeId] = useState<string | null>(null)
   const [serverSelection, setServerSelection] = useState<SectionResponse | null>(null)
   const [userSelection, setUserSelection] = useState<[number, number] | null>(null)
-  const [waitting, setWaitting] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState<string | null>(null)
   const [stage, setStage] = useState<Stage>(Stage.None)
   const registerLock = useRef(false)
 
@@ -131,15 +131,15 @@ export default function Index() {
       return
     }
     _.debounce(() => {
-      if (DISBALE_QUERY) return
-      setWaitting(rangeId === "summary" ? "doc" : "summary")
+      if (DISABLE_QUERY) return
+      setWaiting(rangeId === "summary" ? "doc" : "summary")
       selectText(labelIndex, {
         start: firstRange[0],
         end: firstRange[1],
         from_summary: rangeId === "summary",
       })
         .then(response => {
-          setWaitting(null)
+          setWaiting(null)
           if ("error" in response) {
             console.error(response.error)
             return
@@ -159,7 +159,7 @@ export default function Index() {
   const washHand = () => {
     setFirstRange(null)
     setRangeId(null)
-    setWaitting(null)
+    setWaiting(null)
     setServerSelection(null)
     setStage(Stage.None)
     setUserSelection(null)
@@ -280,10 +280,10 @@ export default function Index() {
       }
       case Stage.First: {
         if (element.id === rangeId || element.parentElement?.id === rangeId) {
-          setFirstRange(getRangeTextHandlableRange(range))
+          setFirstRange(getRangeTextHandleableRange(range))
           setUserSelection(null)
         } else {
-          setUserSelection(getRangeTextHandlableRange(range))
+          setUserSelection(getRangeTextHandleableRange(range))
         }
         break
       }
@@ -314,7 +314,7 @@ export default function Index() {
       >
         Export Labels
       </Button>
-      <Link href="/history.html" rel="noopener noreferrer" target="_blank">
+      <Link href="/history/" rel="noopener noreferrer" target="_blank">
         <Button>History</Button>
       </Link>
       <br />
@@ -362,8 +362,8 @@ export default function Index() {
             style={{
               flex: 1,
               marginRight: "1em",
-              userSelect: waitting === "doc" ? "none" : "auto",
-              color: waitting === "doc" ? "gray" : "black",
+              userSelect: waiting === "doc" ? "none" : "auto",
+              color: waiting === "doc" ? "gray" : "black",
             }}
           >
             <CardHeader
@@ -395,8 +395,8 @@ export default function Index() {
             style={{
               flex: 1,
               marginLeft: "1em",
-              userSelect: waitting === "summary" ? "none" : "auto",
-              color: waitting === "summary" ? "gray" : "black",
+              userSelect: waiting === "summary" ? "none" : "auto",
+              color: waiting === "summary" ? "gray" : "black",
             }}
           >
             <CardHeader

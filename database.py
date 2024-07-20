@@ -90,7 +90,7 @@ class Database:
 
     def dump_all_data(
         self,
-        dump_file: str = "mercury_annotatins.json",
+        dump_file: str = "mercury_annotations.json",
         source_corpus_id: int | None = None,
         summary_corpus_id: int | None = None,
     ) -> list[AnnotationData]:
@@ -98,8 +98,6 @@ class Database:
             raise ValueError("Source and Summary corpus IDs are required.")
 
         def get_source_and_summary_from_sample_id(sample_id: str) -> tuple[str, str]:
-            source = ""
-            summary = ""
             source_response = self.vectara_client.list_documents_with_filter(
                 corpus_id=source_corpus_id,
                 numResults=1,

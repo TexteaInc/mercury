@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "dev": "env NEXT_PUBLIC_BACKEND=http://127.0.0.1:8000 next dev --turbo",
+    "dev": "env NEXT_PUBLIC_BACKEND=http://127.0.0.1:8000 next dev",
     "build": "next build",
     "start": "next start",
     "lint": "npx @biomejs/biome check ./app ./components ./utils --apply"
