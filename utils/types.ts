@@ -48,7 +48,8 @@ export type Normal = {
 }
 
 export type LabelData = {
-  task_id: string
+  record_id: string
+  sample_id: string
   summary_start: number
   summary_end: number
   source_start: number

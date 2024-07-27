@@ -76,4 +76,20 @@ const exportLabel = (): Promise<LabelData[]> => {
   })
 }
 
-export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel }
+const deleteRecord = (recordId: string): Promise<Normal> => {
+    return getKey().then(key => {
+        return fetch(`${backend}/record/${recordId}`, {
+        method: "DELETE",
+        headers: {
+            "User-Key": key,
+        },
+        })
+        .then(response => response.json())
+        .then(data => {
+            return data as Normal
+        })
+    })
+
+}
+
+export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, deleteRecord }

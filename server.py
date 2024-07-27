@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from starlette.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -125,6 +125,7 @@ async def post_task(task_index: int, label: Label, user_key: Annotated[str, Head
         user_key = user_key[1:-1]
 
     label_data = LabelData(
+        record_id="not assigned",
         sample_id=tasks[task_index]["_id"],
         summary_start=label.summary_start,
         summary_end=label.summary_end,
@@ -163,8 +164,6 @@ async def post_selections(task_index: int, selection: Selection):
     selections = []
     for i in response["responseSet"][0]["response"]:
         score = i["score"]
-        offset = -1
-        length = -1
         true_offset = 0
         for j in i["metadata"]:
             if j["name"] == "true_offset":
@@ -182,6 +181,10 @@ async def post_selections(task_index: int, selection: Selection):
     return selections
 
 
+@app.delete("/record/{record_id}")
+async def delete_annotation(record_id: str, user_key: Annotated[str, Header()]):
+    database.delete_annotation(record_id, user_key)
+    return {"message": "success"}
 
 
 if __name__ == "__main__":

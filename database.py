@@ -1,6 +1,8 @@
 import json
 import uuid
 from typing import List, Literal, TypedDict
+import pandas as pd
+import threading
 
 from dotenv import load_dotenv
 
@@ -8,6 +10,7 @@ from better_vectara import BetterVectara as Vectara
 
 
 class LabelData(TypedDict):  # human annotation on a sample
+    record_id: str
     sample_id: str
     summary_start: int
     summary_end: int
@@ -64,35 +67,70 @@ def fetch_annotations_from_corpus(client: Vectara, source_id: int) -> List[Label
 
 class Database:
     def __init__(self, annotation_corpus_id: int, vectara_client: Vectara = Vectara()):
+        self.lock = threading.Lock()
         self.vectara_client = vectara_client
         self.annotation_corpus_id = annotation_corpus_id
-        self.annotations: List[LabelData] = fetch_annotations_from_corpus(
+        annotation_records: List[LabelData] = fetch_annotations_from_corpus(
             self.vectara_client, self.annotation_corpus_id
         )
+        self.annotations = pd.DataFrame.from_records(
+            annotation_records,
+            columns=["record_id", "sample_id", "summary_start", "summary_end", "source_start",
+                     "source_end", "consistent", "task_index", "user_id"])
 
+    @staticmethod
+    def database_lock():
+        def decorator(func):
+            def wrapper(self, *args, **kwargs):
+                self.lock.acquire()
+                result = func(self, *args, **kwargs)
+                self.lock.release()
+                return result
+            return wrapper
+        return decorator
+
+    @database_lock()
     def push_annotation(self, label_data: LabelData):
-        if label_data in self.annotations:
+        if (
+                (self.annotations["sample_id"] == label_data["sample_id"]) &
+                (self.annotations["summary_start"] == label_data["summary_start"]) &
+                (self.annotations["summary_end"] == label_data["summary_end"]) &
+                (self.annotations["source_start"] == label_data["source_start"]) &
+                (self.annotations["source_end"] == label_data["source_end"]) &
+                (self.annotations["task_index"] == label_data["task_index"]) &
+                (self.annotations["user_id"] == label_data["user_id"])
+        ).any():
             return
-        self.annotations.append(label_data)
+        record_id = uuid.uuid4().hex
+        label_data["record_id"] = record_id
+        self.annotations.loc[len(self.annotations.index)] = (
+            label_data["record_id"],
+            label_data["sample_id"],
+            label_data["summary_start"],
+            label_data["summary_end"],
+            label_data["source_start"],
+            label_data["source_end"],
+            label_data["consistent"],
+            label_data["task_index"],
+            label_data["user_id"],
+        )
         self.vectara_client.create_document_from_chunks(
             corpus_id=self.annotation_corpus_id,
             chunks=["NO CHUNKS"],
-            doc_id="no_need_" + uuid.uuid4().hex,
+            doc_id=record_id,
             doc_metadata=label_data,  # type: ignore
         )
 
+    @database_lock()
     def export_user_data(self, user_id: str) -> list[LabelData]:
-        return [
-            label_data
-            for label_data in self.annotations
-            if label_data["user_id"] == user_id
-        ]
+        return self.annotations[self.annotations["user_id"] == user_id].to_dict(orient="records")
 
+    @database_lock()
     def dump_all_data(
-        self,
-        dump_file: str = "mercury_annotations.json",
-        source_corpus_id: int | None = None,
-        summary_corpus_id: int | None = None,
+            self,
+            dump_file: str = "mercury_annotations.json",
+            source_corpus_id: int | None = None,
+            summary_corpus_id: int | None = None,
     ) -> list[AnnotationData]:
         if source_corpus_id is None or summary_corpus_id is None:
             raise ValueError("Source and Summary corpus IDs are required.")
@@ -111,8 +149,8 @@ class Database:
                 metadataFilter=f"doc.id = '{sample_id}'",
             )
             if (
-                len(source_response["document"]) < 0
-                or len(summary_response["document"]) < 0
+                    len(source_response["document"]) < 0
+                    or len(summary_response["document"]) < 0
             ):
                 raise ValueError(
                     f"Sample ID {sample_id} not found in source or summary corpus."
@@ -154,15 +192,15 @@ class Database:
                         "start": metadata["source_start"],
                         "end": metadata["source_end"],
                         "text": with_id[sample_id]["source"][
-                            metadata["source_start"] : metadata["source_end"]
-                        ],
+                                metadata["source_start"]: metadata["source_end"]
+                                ],
                     },
                     "summary": {
                         "start": metadata["summary_start"],
                         "end": metadata["summary_end"],
                         "text": with_id[sample_id]["summary"][
-                            metadata["summary_start"] : metadata["summary_end"]
-                        ],
+                                metadata["summary_start"]: metadata["summary_end"]
+                                ],
                     },
                     "consistent": metadata["consistent"],
                     "annotator": metadata["user_id"],
@@ -183,6 +221,17 @@ class Database:
 
         return result
 
+    @database_lock()
+    def delete_annotation(self, record_id: str, user_id: str):
+        if not (
+                (self.annotations["record_id"] == record_id)
+                & (self.annotations["user_id"] == user_id)
+        ).any():
+            return
+        record_index = self.annotations[self.annotations["record_id"] == record_id].index
+        self.annotations.drop(record_index, inplace=True)
+        self.vectara_client.delete_document(self.annotation_corpus_id, record_id)
+
 
 if __name__ == "__main__":
     import argparse
@@ -190,11 +239,13 @@ if __name__ == "__main__":
 
     load_dotenv()
 
+
     def get_env_id_value(env_name: str) -> int | None:
         env = os.environ.get(env_name, None)
         if env is not None:
             return int(env)
         return None
+
 
     parser = argparse.ArgumentParser(
         description="Dump all annotations from a Vectara corpus to a JSON file."
