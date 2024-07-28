@@ -23,8 +23,9 @@ import { useEffect, useRef, useState } from "react"
 import { type HistorySlice, historyTextToSlice } from "../../utils/mergeArray"
 import { exportLabel, getSingleTask, deleteRecord } from "../../utils/request"
 import type { LabelData, Task } from "../../utils/types"
+import { DeleteRegular, DismissRegular, EyeRegular } from "@fluentui/react-icons";
 
-export default function Index() {
+export default function Page() {
   const [history, setHistory] = useState<LabelData[]>([])
   const [taskIndex, setTaskIndex] = useState<number | null>(null)
   const [historyIndex, setHistoryIndex] = useState<number | null>(null)
@@ -75,7 +76,7 @@ export default function Index() {
 
   return (
     <>
-      <Title1>Mercury Labels</Title1>
+      <Title1>Mercury Label History</Title1>
       <Dialog open={dialogOpen}>
         <DialogSurface>
           <DialogBody>
@@ -158,13 +159,13 @@ export default function Index() {
               )}
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setDialogOpen(false)}>Close</Button>
-              <Button onClick={() => {
+              <Button icon={<DeleteRegular />} onClick={() => {
                 deleteRecord(taskData.record_id).then(() => {
                   setDialogOpen(false)
                   setHistory(history.filter((_, index) => index !== historyIndex))
                 })
               }}>Delete</Button>
+              <Button icon={<DismissRegular />} onClick={() => setDialogOpen(false)}>Close</Button>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
@@ -187,7 +188,7 @@ export default function Index() {
             <CardHeader
               header={
                 <Body1>
-                  <strong>Record ID: {label.record_id}</strong>
+                  <strong>Record ID:</strong> {label.record_id}
                 </Body1>
               }
             />
@@ -202,6 +203,7 @@ export default function Index() {
             </Text>
             <CardFooter>
               <Button
+                icon={<EyeRegular />}
                 onClick={() => {
                   setTaskIndex(label.task_index)
                   setHistoryIndex(index)

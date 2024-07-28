@@ -126,6 +126,13 @@ class Database:
         return self.annotations[self.annotations["user_id"] == user_id].to_dict(orient="records")
 
     @database_lock()
+    def export_task_history(self, task_index: int, user_id: str) -> list[LabelData]:
+        return self.annotations[
+                (self.annotations["user_id"] == user_id) &
+                (self.annotations["task_index"] == task_index)
+            ].to_dict(orient="records")
+
+    @database_lock()
     def dump_all_data(
             self,
             dump_file: str = "mercury_annotations.json",

@@ -1,4 +1,4 @@
-const getRangeTextHandlableRange = (range: Range): [number, number] => {
+const getRangeTextHandleableRange = (range: Range): [number, number] => {
   let start = range.startContainer
   let end = range.endContainer
 
@@ -25,4 +25,4 @@ const getRangeTextHandlableRange = (range: Range): [number, number] => {
   return [startOffset + startNodeLabelStart, endOffset + endNodeLabelStart]
 }
 
-export default getRangeTextHandlableRange
+export default getRangeTextHandleableRange

@@ -8,12 +8,13 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
 from better_vectara import BetterVectara as Vectara
 from database import Database, LabelData
+from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import FileResponse
 
 
 app = FastAPI()
@@ -119,6 +120,13 @@ async def get_task(task_index: int = 0):
     return {"doc": task["source"], "sum": task["summary"]}
 
 
+@app.get("/task/{task_index}/history")
+async def get_task_history(task_index: int, user_key: Annotated[str, Header()]):
+    if user_key.startswith('"') and user_key.endswith('"'):
+        user_key = user_key[1:-1]
+    return database.export_task_history(task_index, user_key)
+
+
 @app.post("/task/{task_index}/label")
 async def post_task(task_index: int, label: Label, user_key: Annotated[str, Header()]):
     if user_key.startswith('"') and user_key.endswith('"'):
@@ -187,7 +195,11 @@ async def delete_annotation(record_id: str, user_key: Annotated[str, Header()]):
     return {"message": "success"}
 
 
+@app.get("/history")  # redirect route to history.html
+async def history():
+    return FileResponse("dist/history.html")
+
+
 if __name__ == "__main__":
-    if "-d" not in sys.argv:
-        app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
+    app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
     uvicorn.run(app, port=8000)

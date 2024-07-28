@@ -2,94 +2,87 @@ import type { AllTasksLength, LabelData, LabelRequest, Normal, SectionResponse, 
 
 const backend = process.env.NEXT_PUBLIC_BACKEND || "";
 
-const getKey = (): Promise<string> => {
-  const key = localStorage.getItem("key")
-  if (key === "" || key === null) {
-    return fetch(`${backend}/user/new`)
-      .then(response => response.json())
-      .then(data => {
-        localStorage.setItem("key", data.key)
-        return data.key
-      })
+const getKey = async (): Promise<string> => {
+    const key = localStorage.getItem("key")
+    if (key === "" || key === null) {
+        const response = await fetch(`${backend}/user/new`);
+        const data = await response.json();
+        localStorage.setItem("key", data.key);
+        return data.key;
   }
   return Promise.resolve(key)
 }
 
-const getAllTasksLength = (): Promise<AllTasksLength> => {
-  return fetch(`${backend}/task`)
-    .then(response => response.json())
-    .then(data => {
-      return data as AllTasksLength
-    })
+const getAllTasksLength = async (): Promise<AllTasksLength> => {
+    const response = await fetch(`${backend}/task`);
+    const data = await response.json();
+    return data as AllTasksLength;
 }
 
-const getSingleTask = (taskIndex: number): Promise<Task | Error> => {
-  return fetch(`${backend}/task/${taskIndex}`)
-    .then(response => response.json())
-    .then(data => {
-      return data as Task | Error
-    })
+const getSingleTask = async (taskIndex: number): Promise<Task | Error> => {
+    const response = await fetch(`${backend}/task/${taskIndex}`);
+    const data = await response.json();
+    return data as Task | Error;
 }
 
-const selectText = (taskIndex: number, req: SelectionRequest): Promise<SectionResponse | Error> => {
-  return fetch(`${backend}/task/${taskIndex}/select`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(req),
-  })
-    .then(response => response.json())
-    .then(data => {
-      return data as SectionResponse | Error
-    })
+const selectText = async (taskIndex: number, req: SelectionRequest): Promise<SectionResponse | Error> => {
+    const response = await fetch(`${backend}/task/${taskIndex}/select`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(req),
+    });
+    const data = await response.json();
+    return data as SectionResponse | Error;
 }
 
-const labelText = (taskIndex: number, req: LabelRequest): Promise<Normal> => {
-  return getKey().then(key => {
-    return fetch(`${backend}/task/${taskIndex}/label`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Key": key,
-      },
-      body: JSON.stringify(req),
-    })
-      .then(response => response.json())
-      .then(data => {
-        return data as Normal
-      })
-  })
+const labelText = async (taskIndex: number, req: LabelRequest): Promise<Normal> => {
+    const key = await getKey();
+    const response = await fetch(`${backend}/task/${taskIndex}/label`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "User-Key": key,
+        },
+        body: JSON.stringify(req),
+    });
+    const data = await response.json();
+    return data as Normal;
 }
 
-const exportLabel = (): Promise<LabelData[]> => {
-  return getKey().then(key => {
-    return fetch(`${backend}/user/export`, {
-      headers: {
-        "User-Key": key,
-      },
-    })
-      .then(response => response.json())
-      .then(data => {
-        return data as LabelData[]
-      })
-  })
+const exportLabel = async (): Promise<LabelData[]> => {
+    const key = await getKey();
+    const response = await fetch(`${backend}/user/export`, {
+        headers: {
+            "User-Key": key,
+        },
+    });
+    const data = await response.json();
+    return data as LabelData[];
 }
 
-const deleteRecord = (recordId: string): Promise<Normal> => {
-    return getKey().then(key => {
-        return fetch(`${backend}/record/${recordId}`, {
+const getTaskHistory = async (taskIndex: number): Promise<LabelData[]> => {
+    const key = await getKey();
+    const response = await fetch(`${backend}/task/${taskIndex}/history`, {
+        headers: {
+            "User-Key": key,
+        },
+    });
+    const data = await response.json();
+    return data as LabelData[];
+}
+
+const deleteRecord = async (recordId: string): Promise<Normal> => {
+    const key = await getKey();
+    const response = await fetch(`${backend}/record/${recordId}`, {
         method: "DELETE",
         headers: {
             "User-Key": key,
         },
-        })
-        .then(response => response.json())
-        .then(data => {
-            return data as Normal
-        })
-    })
-
+    });
+    const data = await response.json();
+    return data as Normal;
 }
 
-export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, deleteRecord }
+export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, getTaskHistory, deleteRecord }
