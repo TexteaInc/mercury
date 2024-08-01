@@ -130,6 +130,8 @@ class Ingester:
         source_corpus_id: int | None = None,
         summary_corpus_id: int | None = None,
         annotation_corpus_id: int | None = None,
+        source_column_name: str = "source",
+        summary_column_name: str = "summary",
         overwrite_corpora: bool = False,
     ):
         self.sources = None
@@ -137,6 +139,8 @@ class Ingester:
         vectara_client = Vectara()
         self.vectara_client = vectara_client
         self.file_path = file_to_ingest
+        self.source_column_name = source_column_name
+        self.summary_column_name = summary_column_name
 
         print("Overwrite corpora is set to: ", overwrite_corpora)
 
@@ -213,8 +217,8 @@ class Ingester:
         
         df.columns = df.columns.str.lower()
 
-        sources = df["source"].tolist()
-        summaries = df["summary"].tolist()
+        sources = df[self.source_column_name].tolist()
+        summaries = df[self.summary_column_name].tolist()
 
         self.sources = sources
         self.summaries = summaries
@@ -314,6 +318,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("file_to_ingest", type=str, help="Path to the file to ingest")
     parser.add_argument(
+        "--source_column_name",
+        type=str,
+        help="The column name for the source text in file_to_ingest. Default: 'source'",
+        default="source",
+    )
+    parser.add_argument(
+        "--summary_column_name",
+        type=str,
+        help="The column name for the summary text in file_to_ingest. Default: 'summary'",
+        default="summary",
+    )
+    parser.add_argument(
         "--source_corpus_id",
         type=int,
         help="Source Corpus ID",
@@ -334,8 +350,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--overwrite_corpora",
         action="store_true",
-        help="Whether to overwrite existing corpora",
+        help="If this flag is set, existing corpora will be reset before ingestion.",
     )
+
+
     args = parser.parse_args()
 
     print("Uploading data to Vectara...")
@@ -345,6 +363,8 @@ if __name__ == "__main__":
         summary_corpus_id=args.summary_corpus_id,
         annotation_corpus_id=args.annotation_corpus_id,
         overwrite_corpora=args.overwrite_corpora,
+        source_column_name=args.source_column_name,
+        summary_column_name=args.summary_column_name
     )
     ingester.main()
 
