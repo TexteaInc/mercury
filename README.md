@@ -41,7 +41,7 @@ Mercury is powered by Vectara's semantic search engine -- which is among the bes
 
    Run `python3 ingester.py -h` to see the options.
 
-   The ingester takes a CSV, JSON, or JSONL file of two fields/columns for each sample: `source` and `summary`. Both fields are strings. Mercury uses three Vectara corpora to store the sources, the summaries, and the human annotations. You can provide the corpus IDs to overwrite or append data to existing corpora.
+   The ingester takes a CSV, JSON, or JSONL file and loads texts from two text columns (configurable via option `source_column_name` and `summary_column_name` which default to `source` and `summary`) of the file. Mercury uses three Vectara corpora to store the sources, the summaries, and the human annotations. You can provide the corpus IDs to overwrite or append data to existing corpora.
 
 3. `pnpm install && pnpm build` (if you don't have `pnpm` installed: `npm install -g pnpm`, you may need sudo)
 4. `python3 server.py`
