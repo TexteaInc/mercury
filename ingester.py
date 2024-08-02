@@ -101,26 +101,26 @@ annotation_metadata_filters = [
 ]
 
 
-class CheckItem(TypedDict):
-    type_: Literal["str", "float", "int", "bool"]
-    has: bool
+# class CheckItem(TypedDict):
+#     type_: Literal["str", "float", "int", "bool"]
+#     has: bool
 
 
-def create_annotation_metadata_check_dict() -> Dict[str, CheckItem]:
-    check_dict = {}
-    for annotation_metadata_filter in annotation_metadata_filters:
-        match annotation_metadata_filter["type"]:
-            case FilterAttributeType.TEXT:
-                type_ = "str"
-            case FilterAttributeType.INTEGER:
-                type_ = "int"
-            case FilterAttributeType.BOOLEAN:
-                type_ = "bool"
-            case _:
-                type_ = "str"
+# def create_annotation_metadata_check_dict() -> Dict[str, CheckItem]:
+    # check_dict = {}
+    # for annotation_metadata_filter in annotation_metadata_filters:
+    #     match annotation_metadata_filter["type"]:
+    #         case FilterAttributeType.TEXT:
+    #             type_ = "str"
+    #         case FilterAttributeType.INTEGER:
+    #             type_ = "int"
+    #         case FilterAttributeType.BOOLEAN:
+    #             type_ = "bool"
+    #         case _:
+    #             type_ = "str"
 
-        check_dict[annotation_metadata_filter["name"]] = {"type_": type_, "has": False}
-    return check_dict
+    #     check_dict[annotation_metadata_filter["name"]] = {"type_": type_, "has": False}
+    # return check_dict
 
 
 class Ingester:
@@ -177,28 +177,43 @@ class Ingester:
             if overwrite_corpora:
                 print(f"Resetting annotation corpus with ID: {annotation_corpus_id}")
                 vectara_client.reset_corpus(annotation_corpus_id)
-                print(f"Checking metadata filters for corpus {annotation_corpus_id}")
+                print(f"Fetching metadata filters for corpus {annotation_corpus_id}")
                 response = vectara_client.read_corpus(
                     [annotation_corpus_id], read_filter_attributes=True
                 )
-                metadata_filters = response["corpora"][0]["filterAttribute"]
-                check_list = create_annotation_metadata_check_dict()
-                for metadata_filter in metadata_filters:
-                    if metadata_filter["name"] in check_list:
-                        check_list[metadata_filter["name"]]["has"] = True
-                for name, check_item in check_list.items():
-                    if not check_item["has"]:
-                        print("Adding metadata filter for", name)
-                        a_filter = Filter(
-                            name=name, 
-                            description = "",
-                            type = check_item["type_"],
-                            level = "doc"
-                        )
-                        vectara_client.set_corpus_filters(
-                            corpus_id=annotation_corpus_id,
-                            filters = [a_filter]
-                        )
+                metadata_filters_in_corpus = response["corpora"][0]["filterAttribute"] # metadata filters already in the corpus 
+                names_of_metadata_filters_in_corpus = [filter["name"] for filter in metadata_filters_in_corpus]
+
+                metadata_filters_to_set = []
+                for filter in annotation_metadata_filters:
+                    filter_name = filter["name"]
+                    if filter_name not in names_of_metadata_filters_in_corpus:
+                        print(f"Adding metadata filter for {filter_name}")
+                        metadata_filters_to_set.append(filter)
+
+                if len(metadata_filters_to_set) > 0:
+                    vectara_client.set_corpus_filters(
+                        corpus_id=annotation_corpus_id,
+                        filters=metadata_filters_to_set
+                    )
+
+                # check_list = create_annotation_metadata_check_dict()
+                # for metadata_filter in metadata_filters:
+                #     if metadata_filter["name"] in check_list:
+                #         check_list[metadata_filter["name"]]["has"] = True
+                # for name, check_item in check_list.items():
+                #     if not check_item["has"]:
+                #         print("Adding metadata filter for", name)
+                #         a_filter = Filter(
+                #             name=name, 
+                #             description = "",
+                #             type = check_item["type_"],
+                #             level = "doc"
+                #         )
+                #         vectara_client.set_corpus_filters(
+                #             corpus_id=annotation_corpus_id,
+                #             filters = [a_filter]
+                #         )
 
         self.source_corpus_id = source_corpus_id
         self.summary_corpus_id = summary_corpus_id
