@@ -1,4 +1,5 @@
 import json
+import spacy
 from enum import Enum
 from typing import Dict, List, Literal, Tuple, TypedDict
 
@@ -141,6 +142,12 @@ class Ingester:
         self.file_path = file_to_ingest
         self.source_column_name = source_column_name
         self.summary_column_name = summary_column_name
+        
+        self.nlp = spacy.load(
+            "en_core_web_sm",
+            exclude=["tok2vec", "tagger", "parser", "ner", "attribute_ruler", "lemmatizer"],
+        )
+        self.nlp.add_pipe('sentencizer')
 
         print("Overwrite corpora is set to: ", overwrite_corpora)
 
@@ -291,20 +298,17 @@ class Ingester:
     def split_text_into_chunks(self, text: str) -> FullChunksWithMetadata:
         chunks: list[OwnChunk] = []
         full_doc_len = len(text)
-        offset = 0
         strings = []
-        for index, item in enumerate(text.split(".")):
+        for index, item in enumerate(self.nlp(text).sents):
             id_ = index + 1
-            true_offset = offset
             chunks.append(
                 {
                     "_id": id_,
-                    "true_offset": true_offset,
-                    "true_len": len(item),
+                    "true_offset": item.start_char,
+                    "true_len": len(item.text),
                 }
             )
-            strings.append(item)
-            offset += len(item) + 1
+            strings.append(item.text)
         return {
             "chunk_metadata": chunks,
             "chunks_len": len(chunks),
