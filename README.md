@@ -23,7 +23,7 @@ Mercury is powered by Vectara's semantic search engine -- which is among the bes
 
 0. Install dependencies
 
-   `pip3 install -r requirements.txt`
+   `pip3 install -r requirements.txt && python3 -m spacy download en_core_web_sm`
 
 1. Set up your Vectara credentials
 

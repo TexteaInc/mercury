@@ -6,3 +6,4 @@ uvicorn
 pandas
 tqdm
 vectara==0.0.5
+spacy
