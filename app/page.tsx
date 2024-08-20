@@ -40,7 +40,9 @@ import {
   userSectionResponse,
 } from "../utils/types";
 import {
+  AddRegular,
   ArrowExportRegular,
+  ArrowSyncRegular,
   ChevronLeftRegular,
   DeleteRegular,
   EyeOffRegular,
@@ -73,12 +75,12 @@ const normalizationColor = (score: number[]) => {
   return normalScores;
 };
 const colors = [
-  "#00a6ff",
-  "#1cb0ff",
-  "#38baff",
-  "#70cdff",
-  "#a8e1ff",
   "#c4ebff",
+  "#a8e1ff",
+  "#70cdff",
+  "#38baff",
+  "#1cb0ff",
+  "#00a6ff",
 ];
 const getColor = (score: number) => {
   return colors[Math.floor(score * (colors.length - 1))];
@@ -246,6 +248,7 @@ export default function Index() {
   }, [firstRange, rangeId, labelIndex]);
 
   const washHand = () => {
+    setViewingRecord(null);
     setFirstRange(null);
     setRangeId(null);
     setWaiting(null);
@@ -372,7 +375,11 @@ export default function Index() {
     const selection = window.getSelection();
     if (selection === null || selection === undefined) return;
     if (!selection.containsNode(element, true)) return;
-    if (selection.toString().trim() === "") return;
+    if (
+      selection.toString().trim() === "" &&
+      JSON.stringify(firstRange) !== "[-1,-1]"
+    )
+      return;
     const range = selection.getRangeAt(0);
     switch (stage) {
       case Stage.None: {
@@ -414,36 +421,60 @@ export default function Index() {
       <Title1>Mercury Label</Title1>
       <br />
       <br />
-      <Button
-        icon={<HandRightRegular />}
-        onClick={washHand}
+      <div
         style={{
-          marginRight: "1em",
+          display: "flex",
+          gap: "1em",
         }}
       >
-        Wash Hand
-      </Button>
-      <Button
-        icon={<ArrowExportRegular />}
-        onClick={exportJSON}
-        style={{ marginRight: "1em" }}
-      >
-        Export Labels
-      </Button>
-      <Link href="/history/" rel="noopener noreferrer" target="_blank">
-        <Button icon={<HistoryRegular />} style={{ marginRight: "1em" }}>
-          History
+        {JSON.stringify(firstRange) === "[-1,-1]" || viewingRecord != null ? (
+          <Button
+            appearance="primary"
+            icon={<HandRightRegular />}
+            onClick={washHand}
+          >
+            Wash Hand
+          </Button>
+        ) : (
+          <Button icon={<HandRightRegular />} onClick={washHand}>
+            Wash Hand
+          </Button>
+        )}
+        <Button icon={<ArrowExportRegular />} onClick={exportJSON}>
+          Export Labels
         </Button>
-      </Link>
-      <Button
-        icon={<EyeOffRegular />}
-        appearance="primary"
-        disabled={viewingRecord == null}
-        onClick={() => setViewingRecord(null)}
-        style={{ marginRight: "1em" }}
-      >
-        Clear Preview
-      </Button>
+        <Link href="/history/" rel="noopener noreferrer" target="_blank">
+          <Button icon={<HistoryRegular />}>History</Button>
+        </Link>
+        <Button
+          icon={<AddRegular />}
+          onClick={() => {
+            washHand();
+            setFirstRange([-1, -1]);
+            setUserSelection(null);
+            setRangeId("doc");
+          }}
+          disabled={
+            JSON.stringify(firstRange) === "[-1,-1]" && rangeId === "doc"
+          }
+        >
+          Select Empty Source
+        </Button>
+        <Button
+          icon={<AddRegular />}
+          onClick={() => {
+            washHand();
+            setFirstRange([-1, -1]);
+            setUserSelection(null);
+            setRangeId("summary");
+          }}
+          disabled={
+            JSON.stringify(firstRange) === "[-1,-1]" && rangeId === "summary"
+          }
+        >
+          Select Empty Summary
+        </Button>
+      </div>
       <br />
       <div
         style={{
@@ -452,7 +483,7 @@ export default function Index() {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "2em",
+          gap: "1em",
         }}
       >
         <Button
@@ -609,6 +640,13 @@ export default function Index() {
                       header={
                         <Body1>
                           <strong>History</strong>
+                          <Button
+                            icon={<ArrowSyncRegular />}
+                            style={{ marginLeft: "1em" }}
+                            onClick={updateHistory}
+                          >
+                            Refresh
+                          </Button>
                         </Body1>
                       }
                     />
@@ -668,7 +706,8 @@ export default function Index() {
                                     record.record_id ? (
                                     <Button
                                       icon={<EyeOffRegular />}
-                                      onClick={() => setViewingRecord(null)}
+                                      appearance="primary"
+                                      onClick={washHand}
                                     >
                                       Restore
                                     </Button>
