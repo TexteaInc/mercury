@@ -38,6 +38,11 @@ import {
   HandRightRegular, HistoryRegular,
   IosChevronRightRegular
 } from "@fluentui/react-icons";
+import { Allotment } from "allotment";
+import "allotment/dist/style.css";
+import React from "react";
+import ColumnResize from "react-table-column-resizer";
+import "./page.css"
 
 const labelIndexAtom = atomWithStorage("labelIndex", 0)
 
@@ -87,13 +92,6 @@ export default function Index() {
   const [stage, setStage] = useState<Stage>(Stage.None)
   const [history, setHistory] = useState<LabelData[]>(null)
   const [viewingRecord, setViewingRecord] = useState<LabelData | null>(null)
-
-  const historyColumns = [
-    { columnKey: "summary", label: "Summary" },
-    { columnKey: "source", label: "Source" },
-    { columnKey: "consistent", label: "Consistent" },
-    { columnKey: "actions", label: "Actions" }
-  ]
 
   useEffect(() => {
     if (getLock.current) return
@@ -365,15 +363,23 @@ export default function Index() {
       <Button
         icon={<ArrowExportRegular />}
         onClick={exportJSON}
-        style={{
-          marginRight: "1em",
-        }}
+        style={{ marginRight: "1em" }}
       >
         Export Labels
       </Button>
       <Link href="/history/" rel="noopener noreferrer" target="_blank">
-        <Button icon={<HistoryRegular />}>History</Button>
+        <Button
+          icon={<HistoryRegular />}
+          style={{ marginRight: "1em" }}
+        >History</Button>
       </Link>
+      <Button
+        icon={<EyeOffRegular />}
+        appearance="primary"
+        disabled={viewingRecord == null}
+        onClick={() => setViewingRecord(null)}
+        style={{ marginRight: "1em" }}
+      >Clear Preview</Button>
       <br />
       <div
         style={{
@@ -417,134 +423,153 @@ export default function Index() {
       {currentTask === null ? (
         <p>Loading...</p>
       ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "baseline",
-            justifyContent: "center",
-          }}
-        >
-          <Card
-            style={{
-              flex: 1,
-              marginRight: "1em",
-              userSelect: waiting === "doc" ? "none" : "auto",
-              color: waiting === "doc" ? "gray" : "black",
-            }}
-          >
-            <CardHeader
-              header={
-                <Body1>
-                  <strong>Source</strong>
-                </Body1>
-              }
-            />
-            <Text
-              id="doc"
-              as="p"
-              data-mercury-label-start={0}
-              data-mercury-label-end={currentTask.doc.length}
-              onMouseUp={event => {
-                checkSelection(event.target as HTMLSpanElement)
-              }}
-            >
-              {serverSelection !== null && serverSelection.length > 0 && rangeId === "summary" ? (
-                <SliceText text={currentTask.doc} slices={serverSelection} user={userSelection} />
-              ) : rangeId === "doc" ? (
-                <JustSliceText text={currentTask.doc} startAndEndOffset={firstRange} />
-              ) : (
-                currentTask.doc
-              )}
-            </Text>
-          </Card>
-          <div style={{
-              flex: 1,
-              marginLeft: "1em",
-              display: "flex",
-              flexDirection: "column",
+        <div style={{
+          height: "80vh",
+          margin: "auto",
+        }}>
+        <Allotment>
+          <Allotment.Pane>
+            <div style={{
+              overflowY: "scroll",
+              height: "100%",
             }}>
-            <Card style={{
-                userSelect: waiting === "summary" ? "none" : "auto",
-                color: waiting === "summary" ? "gray" : "black",
-              }}
-            >
-              <CardHeader
-                header={
-                  <Body1>
-                    <strong>Summary</strong>
-                  </Body1>
-                }
-              />
-              <Text
-                id="summary"
-                as="p"
-                data-mercury-label-start={0}
-                data-mercury-label-end={currentTask.sum.length}
-                onMouseUp={event => checkSelection(event.target as HTMLSpanElement)}
+              <Card
+                style={{
+                  userSelect: waiting === "doc" ? "none" : "auto",
+                  color: waiting === "doc" ? "gray" : "black",
+                }}
               >
-                {serverSelection !== null && rangeId === "doc" ? (
-                  <SliceText text={currentTask.sum} slices={serverSelection} user={userSelection} />
-                ) : rangeId === "summary" ? (
-                  <JustSliceText text={currentTask.sum} startAndEndOffset={firstRange} />
-                ) : (
-                  currentTask.sum
-                )}
-              </Text>
-            </Card>
-            <br />
-            <Card>
-              <CardHeader
+                <CardHeader
                   header={
                     <Body1>
-                      <strong>History</strong>
+                      <strong>Source</strong>
                     </Body1>
                   }
-              />
-              {history === null ? (
-                <p>Loading...</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {historyColumns.map(column => (
-                        <TableHeaderCell key={column.columnKey}>{column.label}</TableHeaderCell>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {
-                      history.sort((a, b) => {
-                        let c = a.source_start - b.source_start
-                        if (c !== 0) c = a.summary_start - b.summary_start
-                        return c
-                      }).map((record, index) => (
-                        <TableRow key={record.record_id}>
-                          <TableCell>{currentTask.sum.slice(record.summary_start, record.summary_end)}</TableCell>
-                          <TableCell>{currentTask.doc.slice(record.source_start, record.source_end)}</TableCell>
-                          <TableCell>{record.consistent ? "Yes" : "No"}</TableCell>
-                          <TableCell>
-                            {
-                              viewingRecord != null && viewingRecord.record_id === record.record_id ?
-                                  <Button icon={<EyeOffRegular />} onClick=
-                                      {() => setViewingRecord(null)}>Restore</Button> :
-                                  <Button icon={<EyeRegular />} onClick=
-                                      {() => {setViewingRecord(record)}}>View</Button>
-                            }
-                            <Button icon={<DeleteRegular />} onClick={() => {
-                              deleteRecord(record.record_id).then(updateHistory)
-                            }}>Delete</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    }
-                  </TableBody>
-                </Table>
-              )}
+                />
+                <Text
+                  id="doc"
+                  as="p"
+                  data-mercury-label-start={0}
+                  data-mercury-label-end={currentTask.doc.length}
+                  onMouseUp={event => {
+                    checkSelection(event.target as HTMLSpanElement)
+                  }}
+                >
+                  {serverSelection !== null && serverSelection.length > 0 && rangeId === "summary" ? (
+                    <SliceText text={currentTask.doc} slices={serverSelection} user={userSelection} />
+                  ) : rangeId === "doc" ? (
+                    <JustSliceText text={currentTask.doc} startAndEndOffset={firstRange} />
+                  ) : (
+                    currentTask.doc
+                  )}
+                </Text>
               </Card>
-          </div>
+            </div>
+          </Allotment.Pane>
+          <Allotment.Pane>
+            <Allotment vertical>
+              <div style={{
+                overflowY: "scroll",
+                height: "100%",
+              }}>
+                <Card style={{
+                  userSelect: waiting === "summary" ? "none" : "auto",
+                  color: waiting === "summary" ? "gray" : "black",
+                }}
+                >
+                  <CardHeader
+                    header={
+                      <Body1>
+                        <strong>Summary</strong>
+                      </Body1>
+                    }
+                  />
+                  <Text
+                      id="summary"
+                      as="p"
+                      data-mercury-label-start={0}
+                      data-mercury-label-end={currentTask.sum.length}
+                      onMouseUp={event => checkSelection(event.target as HTMLSpanElement)}
+                  >
+                    {serverSelection !== null && rangeId === "doc" ? (
+                      <SliceText text={currentTask.sum} slices={serverSelection}
+                                 user={userSelection}/>
+                    ) : rangeId === "summary" ? (
+                      <JustSliceText text={currentTask.sum} startAndEndOffset={firstRange}/>
+                    ) : (
+                      currentTask.sum
+                    )}
+                  </Text>
+                </Card>
+              </div>
+              <div style={{
+                overflowY: "scroll",
+                height: "100%",
+              }}>
+                <Card>
+                  <CardHeader
+                    header={
+                      <Body1>
+                        <strong>History</strong>
+                      </Body1>
+                    }
+                  />
+                  {history === null ? (
+                    <p>Loading...</p>
+                  ) : (
+                    <Table className="column_resize_table">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHeaderCell key="summary">Summary</TableHeaderCell>
+                          <ColumnResize id={1} className="columnResizer" />
+                          <TableHeaderCell key="source">Source</TableHeaderCell>
+                          <ColumnResize id={2} className="columnResizer" />
+                          <TableHeaderCell key="consistent">Consistent</TableHeaderCell>
+                          <ColumnResize id={3} className="columnResizer" />
+                          <TableHeaderCell key="actions">Actions</TableHeaderCell>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {
+                          history.sort((a, b) => {
+                            let c = a.source_start - b.source_start
+                            if (c == 0) c = a.summary_start - b.summary_start
+                            return c
+                          }).map((record, index) => (
+                              <TableRow key={record.record_id}>
+                                <TableCell>{currentTask.sum.slice(record.summary_start, record.summary_end)}</TableCell>
+                                <TableCell className="column_resizer_body"/>
+                                <TableCell>{currentTask.doc.slice(record.source_start, record.source_end)}</TableCell>
+                                <TableCell className="column_resizer_body"/>
+                                <TableCell>{record.consistent ? "Yes" : "No"}</TableCell>
+                                <TableCell className="column_resizer_body"/>
+                                <TableCell>
+                                  {
+                                    viewingRecord != null && viewingRecord.record_id === record.record_id ?
+                                        <Button icon={<EyeOffRegular/>} onClick=
+                                            {() => setViewingRecord(null)}>Restore</Button> :
+                                        <Button icon={<EyeRegular/>} onClick=
+                                            {() => {
+                                              setViewingRecord(record)
+                                            }}>Preview</Button>
+                                  }
+                                  <Button icon={<DeleteRegular/>} onClick={() => {
+                                    deleteRecord(record.record_id).then(updateHistory)
+                                  }}>Delete</Button>
+                                </TableCell>
+                              </TableRow>
+                          ))
+                        }
+                      </TableBody>
+                    </Table>
+                  )}
+                </Card>
+              </div>
+            </Allotment>
+          </Allotment.Pane>
+        </Allotment>
         </div>
-      )}
+        )}
     </>
   )
 }
