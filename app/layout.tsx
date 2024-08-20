@@ -1,5 +1,5 @@
-"use client"
-import { FluentProvider, webLightTheme } from "@fluentui/react-components"
+"use client";
+import { FluentProvider, webLightTheme } from "@fluentui/react-components";
 
 export default function RootLayout({ children }) {
   return (
@@ -21,11 +21,13 @@ export default function RootLayout({ children }) {
         }}
       >
         <FluentProvider theme={webLightTheme}>
-          <div style={{ width: "98%", padding: "1rem", margin: "0 auto" }}>{children}</div>
+          <div style={{ width: "98%", padding: "1rem", margin: "0 auto" }}>
+            {children}
+          </div>
         </FluentProvider>
       </body>
     </html>
-  )
+  );
 }
 
 // export default dynamic(() => Promise.resolve(RootLayout), {
