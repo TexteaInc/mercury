@@ -2,30 +2,12 @@ import json
 from enum import Enum
 from typing import Dict, List, Literal, Tuple, TypedDict
 
+import sqlite3, sqlite_vec
+import spacy 
 import pandas
 import requests
 from dotenv import load_dotenv
 from tqdm.auto import tqdm
-
-from better_vectara import BetterVectara as Vectara
-
-
-class FilterAttributeType(Enum):
-    UNDEFINED = "FILTER_ATTRIBUTE_TYPE__UNDEFINED"
-    INTEGER = "FILTER_ATTRIBUTE_TYPE__INTEGER"
-    INTEGER_LIST = "FILTER_ATTRIBUTE_TYPE__INTEGER_LIST"
-    REAL = "FILTER_ATTRIBUTE_TYPE__REAL"
-    REAL_LIST = "FILTER_ATTRIBUTE_TYPE__REAL_LIST"
-    TEXT = "FILTER_ATTRIBUTE_TYPE__TEXT"
-    TEXT_LIST = "FILTER_ATTRIBUTE_TYPE__TEXT_LIST"
-    BOOLEAN = "FILTER_ATTRIBUTE_TYPE__BOOLEAN"
-
-
-class FilterAttributeLevel(Enum):
-    UNDEFINED = "FILTER_ATTRIBUTE_LEVEL__UNDEFINED"
-    DOCUMENT = "FILTER_ATTRIBUTE_LEVEL__DOCUMENT"
-    DOCUMENT_PART = "FILTER_ATTRIBUTE_LEVEL__DOCUMENT_PART"
-
 
 class Schema(TypedDict):
     _id: int
@@ -51,154 +33,69 @@ class FullChunksWithMetadata(TypedDict):
     chunks: list[str]
     chunk_metadata: list[OwnChunk]
 
-from vectara.data_types import Filter
-
 load_dotenv()
 
-annotation_metadata_filters = [
-    {
-        "name": "user_id",
-        "indexed": True,
-        "type": FilterAttributeType.TEXT,
-        "level": FilterAttributeLevel.DOCUMENT,
-    },
-    {
-        "name": "sample_id",
-        "indexed": True,
-        "type": FilterAttributeType.TEXT,
-        "level": FilterAttributeLevel.DOCUMENT,
-    },
-    {
-        "name": "summary_start",
-        "indexed": True,
-        "type": FilterAttributeType.INTEGER,
-        "level": FilterAttributeLevel.DOCUMENT,
-    },
-    {
-        "name": "summary_end",
-        "indexed": True,
-        "type": FilterAttributeType.INTEGER,
-        "level": FilterAttributeLevel.DOCUMENT,
-    },
-    {
-        "name": "source_start",
-        "indexed": True,
-        "type": FilterAttributeType.INTEGER,
-        "level": FilterAttributeLevel.DOCUMENT,
-    },
-    {
-        "name": "source_end",
-        "indexed": True,
-        "type": FilterAttributeType.INTEGER,
-        "level": FilterAttributeLevel.DOCUMENT,
-    },
-    {
-        "name": "consistent",
-        "indexed": True,
-        "type": FilterAttributeType.BOOLEAN,
-        "level": FilterAttributeLevel.DOCUMENT,
-    },
-]
 
+class Embedder: 
+    def __init__(self, name: Literal['bge-m3']):
+        if name == 'bge-m3':+
+        
+            from FlagEmbedding import BGEM3FlagModel
 
-class CheckItem(TypedDict):
-    type_: Literal["str", "float", "int", "bool"]
-    has: bool
+        
 
+def embed_text(
+        ts: List[str], 
+        model_id: str, 
+        embed_dim: int = 512 
+        ):
+    """Embed a list of strings using a model on HF"""
+    pass 
 
-def create_annotation_metadata_check_dict() -> Dict[str, CheckItem]:
-    check_dict = {}
-    for annotation_metadata_filter in annotation_metadata_filters:
-        match annotation_metadata_filter["type"]:
-            case FilterAttributeType.TEXT:
-                type_ = "str"
-            case FilterAttributeType.INTEGER:
-                type_ = "int"
-            case FilterAttributeType.BOOLEAN:
-                type_ = "bool"
-            case _:
-                type_ = "str"
-
-        check_dict[annotation_metadata_filter["name"]] = {"type_": type_, "has": False}
-    return check_dict
+def chunk_text(
+        ts: List[str], 
+): 
 
 
 class Ingester:
     def __init__(
         self,
         file_to_ingest: str,
-        source_corpus_id: int | None = None,
-        summary_corpus_id: int | None = None,
-        annotation_corpus_id: int | None = None,
-        overwrite_corpora: bool = False,
+
+        append_to_corpora: bool = False,
+        embedding_dimension: int = 512,
+        embedding_model_id: str = "BAAI/bge-m3",
+        sqlite_db_path: str = "./mercury.sqlite",
     ):
         self.sources = None
         self.summaries = None
-        vectara_client = Vectara()
-        self.vectara_client = vectara_client
+        self.sqlite_db_path = sqlite_db_path
+        self.embedding_dimension = embedding_dimension
+        self.append_to_corpora = append_to_corpora
         self.file_path = file_to_ingest
 
-        print("Overwrite corpora is set to: ", overwrite_corpora)
+        self.text: Dict[str, List[str]] = {} # keys as text columns names and values as list of strings comprising the columns. 
 
-        # prepare three corpora for source, summary and annotation
-        if source_corpus_id is None:
-            print("Creating source corpus")
-            id_temp = vectara_client.create_corpus("mercury_source")
-            assert isinstance(id_temp, int)
-            source_corpus_id = id_temp
-            print("A new source corpus is created, with ID: ", source_corpus_id)
-        else:
-            if overwrite_corpora:
-                print(f"Resetting source corpus with ID: {source_corpus_id}")
-                vectara_client.reset_corpus(source_corpus_id)
+    def prepare_db(self):
 
-        if summary_corpus_id is None:
-            print("Creating summary corpus")
-            id_temp = vectara_client.create_corpus("mercury_summary")
-            assert isinstance(id_temp, int)
-            summary_corpus_id = id_temp
-            print("A new summary corpus is created, with ID: ", summary_corpus_id)
-        else:
-            if overwrite_corpora:
-                print(f"Resetting summary corpus with ID: {summary_corpus_id}")
-                vectara_client.reset_corpus(summary_corpus_id)
+        db = sqlite3.connect("mercury.sqlite")
+        db.enable_load_extension(True)
+        sqlite_vec.load(db)
+        db.enable_load_extension(False)
 
-        if annotation_corpus_id is None:
-            annotation_corpus_id = vectara_client.create_corpus_with_metadata_filters(
-                "mercury_annotation",
-                metadata_filters=annotation_metadata_filters,
-            )
-            print("A new annotation corpus is created, with ID: ", annotation_corpus_id)
-        else:
-            if overwrite_corpora:
-                print(f"Resetting annotation corpus with ID: {annotation_corpus_id}")
-                vectara_client.reset_corpus(annotation_corpus_id)
-                print(f"Checking metadata filters for corpus {annotation_corpus_id}")
-                response = vectara_client.read_corpus(
-                    [annotation_corpus_id], read_filter_attributes=True
-                )
-                metadata_filters = response["corpora"][0]["filterAttribute"]
-                check_list = create_annotation_metadata_check_dict()
-                for metadata_filter in metadata_filters:
-                    if metadata_filter["name"] in check_list:
-                        check_list[metadata_filter["name"]]["has"] = True
-                for name, check_item in check_list.items():
-                    if not check_item["has"]:
-                        print("Adding metadata filter for", name)
-                        a_filter = Filter(
-                            name=name, 
-                            description = "",
-                            type = check_item["type_"],
-                            level = "doc"
-                        )
-                        vectara_client.set_corpus_filters(
-                            corpus_id=annotation_corpus_id,
-                            filters = [a_filter]
-                        )
+        if not self.append_to_corpora:
+            db.execute("DROP TABLE IF EXISTS corpus")
+            db.execute("DROP TABLE IF EXISTS embeddings")
 
-        self.source_corpus_id = source_corpus_id
-        self.summary_corpus_id = summary_corpus_id
-        self.annotation_corpus_id = annotation_corpus_id
+            # table 1: text chunks
+            # columns: 
+            # the id of the chunk, the id of the sample, the type of the chunk, the text of the chunk 
+            command_create_chunks = "CREATE TABLE chunks (chunk_id INTEGER PRIMARY KEY, sample_id int, offset int, length int, type TEXT, chunk TEXT)"
+            db.execute(command_create_chunks)
+
+            # table 2: embeddings of chunks 
+
+            db.execute(f"CREATE VIRTUAL TABLE embeddings USING vec0(embedding float[{self.embedding_dimension}])") # the embedding of text chunks  
 
     def load_data_for_ingestion(self) -> Tuple[List[str], List[str]]:
         # if file_to_ingest ends with JSONL, load it as JSONL
@@ -216,9 +113,20 @@ class Ingester:
         sources = df["source"].tolist()
         summaries = df["summary"].tolist()
 
-        self.sources = sources
-        self.summaries = summaries
-        return sources, summaries
+        self.text['source'] = sources
+        self.text['summary'] = summaries
+        return sources, summaries 
+    
+    def ingest_to_corpora(self, batch_size: int = 4):
+        """Chunk the data and ingest it to the the db table corpora"""
+
+        for text_type, docs in self.text.items():
+            for i in range(0, len(docs), batch_size):
+                local_chunks = 
+
+
+
+        
 
     def ingest_to_corpora(self):
         sources, summaries = self.load_data_for_ingestion()
