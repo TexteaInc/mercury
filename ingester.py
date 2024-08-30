@@ -5,7 +5,8 @@ from typing import Dict, List, Literal, Tuple, TypedDict
 import sqlite3, sqlite_vec
 import spacy 
 import pandas
-import requests
+import numpy as np
+
 from dotenv import load_dotenv
 from tqdm.auto import tqdm
 
@@ -13,13 +14,6 @@ class Schema(TypedDict):
     _id: int
     source: str
     summary: str
-
-
-# class SectionSlice(TypedDict):
-#     _id: int
-#     offset: int
-#     text: str
-
 
 class OwnChunk(TypedDict):
     _id: int
@@ -38,23 +32,23 @@ load_dotenv()
 
 class Embedder: 
     def __init__(self, name: Literal['bge-m3']):
-        if name == 'bge-m3':+
-        
+        self.name = name 
+        if name == 'bge-m3':
             from FlagEmbedding import BGEM3FlagModel
+            self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True) 
+    
+    def embed(self, texts: List[str], batch_size:int = 12) -> np.ndarray:
+        if self.name == 'bge-m3':
+            return self.model.encode(texts, batch_size=batch_size, max_length=512)['dense_vecs']
 
-        
+class Chunker: 
+    def __init__(self):
+        nlp = spacy.load("en_core_web_sm", exclude=["tok2vec",'tagger','parser','ner', 'attribute_ruler', 'lemmatizer'])
+        nlp.add_pipe("sentencizer")
+        self.nlp = nlp
 
-def embed_text(
-        ts: List[str], 
-        model_id: str, 
-        embed_dim: int = 512 
-        ):
-    """Embed a list of strings using a model on HF"""
-    pass 
-
-def chunk_text(
-        ts: List[str], 
-): 
+    def chunk(self, texts: List[str]) -> List[List[str]]:
+        return [[sent.text for sent in doc.sents ] for doc in self.nlp.pipe(texts)]
 
 
 class Ingester:
