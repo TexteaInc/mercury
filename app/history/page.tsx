@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import {
   Body1,
@@ -17,66 +17,62 @@ import {
   MessageBarTitle,
   Text,
   Title1,
-} from "@fluentui/react-components";
-import {
-  DeleteRegular,
-  DismissRegular,
-  EyeRegular,
-} from "@fluentui/react-icons";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { type HistorySlice, historyTextToSlice } from "../../utils/mergeArray";
-import { deleteRecord, exportLabel, getSingleTask } from "../../utils/request";
-import type { LabelData, Task } from "../../utils/types";
+} from "@fluentui/react-components"
+import { DeleteRegular, DismissRegular, EyeRegular } from "@fluentui/react-icons"
+import Link from "next/link"
+import { useEffect, useRef, useState } from "react"
+import { type HistorySlice, historyTextToSlice } from "../../utils/mergeArray"
+import { deleteRecord, exportLabel, getSingleTask } from "../../utils/request"
+import type { LabelData, Task } from "../../utils/types"
 
 export default function Page() {
-  const [history, setHistory] = useState<LabelData[]>([]);
-  const [taskIndex, setTaskIndex] = useState<number | null>(null);
-  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [taskData, setTaskData] = useState<(LabelData & Task) | null>(null);
+  const [history, setHistory] = useState<LabelData[]>([])
+  const [taskIndex, setTaskIndex] = useState<number | null>(null)
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [taskData, setTaskData] = useState<(LabelData & Task) | null>(null)
 
-  const [doc, setDoc] = useState<HistorySlice[] | null>(null);
-  const [summary, setSummary] = useState<HistorySlice[] | null>(null);
+  const [doc, setDoc] = useState<HistorySlice[] | null>(null)
+  const [summary, setSummary] = useState<HistorySlice[] | null>(null)
 
-  const queryDone = useRef(false);
-
-  useEffect(() => {
-    if (queryDone.current) return;
-    exportLabel().then((data) => {
-      setHistory(data);
-      queryDone.current = true;
-    });
-  }, []);
+  const queryDone = useRef(false)
 
   useEffect(() => {
-    if (taskIndex === null || historyIndex === null) return;
-    if (history.length === 0) return;
-    if (historyIndex < 0 || historyIndex >= history.length) return;
-    getSingleTask(taskIndex).then((data) => {
+    if (queryDone.current) return
+    exportLabel().then(data => {
+      setHistory(data)
+      queryDone.current = true
+    })
+  }, [])
+
+  useEffect(() => {
+    if (taskIndex === null || historyIndex === null) return
+    if (history.length === 0) return
+    if (historyIndex < 0 || historyIndex >= history.length) return
+    getSingleTask(taskIndex).then(data => {
       if ("doc" in data) {
-        setTaskData({ ...history[historyIndex], ...data });
-        const consistent = history[historyIndex].consistent;
-        const rawDoc = data.doc;
-        const rawSummary = data.sum;
+        setTaskData({ ...history[historyIndex], ...data })
+        const consistent = history[historyIndex].consistent
+        const rawDoc = data.doc
+        const rawSummary = data.sum
 
         const docPart: HistorySlice[] = historyTextToSlice(
           rawDoc,
           history[historyIndex].source_start,
           history[historyIndex].source_end,
           consistent,
-        );
+        )
         const summaryPart: HistorySlice[] = historyTextToSlice(
           rawSummary,
           history[historyIndex].summary_start,
           history[historyIndex].summary_end,
           consistent,
-        );
-        setDoc(docPart);
-        setSummary(summaryPart);
+        )
+        setDoc(docPart)
+        setSummary(summaryPart)
       }
-    });
-  }, [taskIndex, historyIndex, history]);
+    })
+  }, [taskIndex, historyIndex, history])
 
   return (
     <>
@@ -120,11 +116,7 @@ export default function Page() {
                         <span
                           key={`doc-${part.labeled}-${index}`}
                           style={{
-                            background: part.labeled
-                              ? part.isConsistent
-                                ? "#00a6ff"
-                                : "#fecdd3"
-                              : "none",
+                            background: part.labeled ? (part.isConsistent ? "#00a6ff" : "#fecdd3") : "none",
                           }}
                         >
                           {part.text}
@@ -140,9 +132,7 @@ export default function Page() {
                     }}
                   >
                     <Text as="span">
-                      <strong>
-                        {taskData.consistent ? "Consistent" : "Not Consistent"}
-                      </strong>
+                      <strong>{taskData.consistent ? "Consistent" : "Not Consistent"}</strong>
                     </Text>
                   </Card>
                   <Card
@@ -163,11 +153,7 @@ export default function Page() {
                         <span
                           key={`summary-${part.labeled}-${index}`}
                           style={{
-                            background: part.labeled
-                              ? part.isConsistent
-                                ? "#00a6ff"
-                                : "#fecdd3"
-                              : "none",
+                            background: part.labeled ? (part.isConsistent ? "#00a6ff" : "#fecdd3") : "none",
                           }}
                         >
                           {part.text}
@@ -183,19 +169,14 @@ export default function Page() {
                 icon={<DeleteRegular />}
                 onClick={() => {
                   deleteRecord(taskData.record_id).then(() => {
-                    setDialogOpen(false);
-                    setHistory(
-                      history.filter((_, index) => index !== historyIndex),
-                    );
-                  });
+                    setDialogOpen(false)
+                    setHistory(history.filter((_, index) => index !== historyIndex))
+                  })
                 }}
               >
                 Delete
               </Button>
-              <Button
-                icon={<DismissRegular />}
-                onClick={() => setDialogOpen(false)}
-              >
+              <Button icon={<DismissRegular />} onClick={() => setDialogOpen(false)}>
                 Close
               </Button>
             </DialogActions>
@@ -207,10 +188,7 @@ export default function Page() {
         <MessageBar shape="square">
           <MessageBarBody>
             <MessageBarTitle>No history</MessageBarTitle>
-            There is no history to display. Go to the <Link href="/">
-              home
-            </Link>{" "}
-            page to start labeling.
+            There is no history to display. Go to the <Link href="/">home</Link> page to start labeling.
           </MessageBarBody>
         </MessageBar>
       ) : (
@@ -230,8 +208,7 @@ export default function Page() {
             <Text as="p">
               <strong>Task Index:</strong> {label.task_index}
               <br />
-              <strong>Summary:</strong> {label.summary_start} -{" "}
-              {label.summary_end}
+              <strong>Summary:</strong> {label.summary_start} - {label.summary_end}
               <br />
               <strong>Source:</strong> {label.source_start} - {label.source_end}
               <br />
@@ -241,9 +218,9 @@ export default function Page() {
               <Button
                 icon={<EyeRegular />}
                 onClick={() => {
-                  setTaskIndex(label.task_index);
-                  setHistoryIndex(index);
-                  setDialogOpen(true);
+                  setTaskIndex(label.task_index)
+                  setHistoryIndex(index)
+                  setDialogOpen(true)
                 }}
               >
                 View
@@ -253,5 +230,5 @@ export default function Page() {
         ))
       )}
     </>
-  );
+  )
 }

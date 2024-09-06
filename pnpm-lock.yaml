@@ -40,7 +40,7 @@ importers:
         version: 18.2.0(react@18.2.0)
       react-table-column-resizer:
         specifier: ^1.2.3
-        version: 1.2.3(react@18.2.0)
+        version: 1.2.4(react@18.2.0)
     devDependencies:
       '@biomejs/biome':
         specifier: 1.6.4
@@ -1510,8 +1510,8 @@ packages:
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
 
-  react-table-column-resizer@1.2.3:
-    resolution: {integrity: sha512-zrhYzeU+AtqW8Q3cr4dSNM+fg4bUEvC5KeE3y4QvuQ9JIj9iJCzVVoXr92U/x/sl/xDLuxAcf7Z2y9l3CvsmFA==}
+  react-table-column-resizer@1.2.4:
+    resolution: {integrity: sha512-G2zm4n0dbGmSdMCcvUIhctUX7WZ2qdGYmN7fk3oNApsRxXBFTCt3JPbtyEgSxSmltSweTfVTK7ZApYQ9Qz/TRw==}
     peerDependencies:
       react: ^18.2.0
 
@@ -3808,7 +3808,7 @@ snapshots:
 
   react-is@17.0.2: {}
 
-  react-table-column-resizer@1.2.3(react@18.2.0):
+  react-table-column-resizer@1.2.4(react@18.2.0):
     dependencies:
       react: 18.2.0
 
