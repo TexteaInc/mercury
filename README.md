@@ -56,11 +56,12 @@ Mercury uses [`sqlite-vec`](https://github.com/asg017/sqlite-vec) to store and s
 
    Run `python3 ingester.py -h` to see the options.
 
-   The ingester takes a CSV, JSON, or JSONL file and loads texts from two text columns (configurable via option `source_column_name` and `summary_column_name` which default to `source` and `summary`) of the file. Mercury uses three Vectara corpora to store the sources, the summaries, and the human annotations. You can provide the corpus IDs to overwrite or append data to existing corpora.
+   The ingester takes a CSV, JSON, or JSONL file and loads texts from two text columns (configurable via option `ingest_column_1` and `ingest_column_2` which default to `source` and `summary`) of the file. Mercury uses three Vectara corpora to store the sources, the summaries, and the human annotations. You can provide the corpus IDs to overwrite or append data to existing corpora.
 
 2. `pnpm install && pnpm build` 
-3. `python3 server.py`
-4. To dump existing annotations, run `python3 database.py -h` to see how.
+3. `python3 server.py`  --- This need rework after switching to SQLite-vec.
+
+The annotations are stored in the `annotations` table in a SQLite database (hardcoded name `mercury.sqlite`). See the section [`annotations` table](#annotations-table-the-human-annotations) for the schema.
 
 ## Technical details
 
@@ -171,6 +172,15 @@ Here is a running example (using the data [above](#chunks-table-chunks-and-metad
     ORDER BY distance
     ```
     The return is `[(4, 0.3506483733654022), (5, 1.1732779741287231)]`. The closest source chunk is "We the people" (`rowid=4`) which is the most famous three words in the U.S. Constitution. 
+
+### Limitations
+1. OpenAI's embedding endpoint can only embed up to 8192 tokens in each call. 
+2. `embdding_dimension` is only useful for OpenAI models. Most other models do not support changing the embedding dimension.
+
+### Embedding speed and/or embedding dimension
+1. `multi-qa-mpnet-base-dot-v1` takes about 0.219 second on a x86 CPU to embed one sentence when batch_size is 1. The embedding dimension is 768. 
+2. `BAAI/bge-small-en-v1.5` takes also about 0.202 second on a x86 CPU to embed one sentence when batch_size is 1. The embedding dimension is 384.
+
 
 ## Technical details (outdated, using Vectara)
 
