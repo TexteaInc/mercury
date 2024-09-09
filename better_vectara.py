@@ -4,7 +4,7 @@ import json
 from typing import Any
 
 import requests
-from vectara import Vectara
+from vektara import Vectara
 
 
 class BetterVectara(Vectara):

@@ -10,36 +10,31 @@ import numpy as np
 from dotenv import load_dotenv
 from tqdm.auto import tqdm
 
-class Schema(TypedDict):
-    _id: int
-    source: str
-    summary: str
-
-class OwnChunk(TypedDict):
-    _id: int
-    true_offset: int
-    true_len: int
-
-
-class FullChunksWithMetadata(TypedDict):
-    chunks_len: int
-    full_doc_len: int
-    chunks: list[str]
-    chunk_metadata: list[OwnChunk]
+import struct
 
 load_dotenv()
 
+def serialize_f32(vector: List[float]) -> bytes:
+    """serializes a list of floats into a compact "raw bytes" format"""
+    return struct.pack("%sf" % len(vector), *vector)
 
 class Embedder: 
-    def __init__(self, name: Literal['bge-m3']):
+    def __init__(self, name: Literal['bge-m3', 'openai']):
         self.name = name 
         if name == 'bge-m3':
             from FlagEmbedding import BGEM3FlagModel
             self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True) 
     
-    def embed(self, texts: List[str], batch_size:int = 12) -> np.ndarray:
+    def embed(self, texts: List[str], embedding_dimension: int= 512,  batch_size:int = 12) -> np.ndarray:
+        """The function that takes a list of strings and returns a numpy array of their embeddings.
+        """
         if self.name == 'bge-m3':
-            return self.model.encode(texts, batch_size=batch_size, max_length=512)['dense_vecs']
+            return self.model.encode(texts, batch_size=batch_size, max_length=embedding_dimension)['dense_vecs']
+        elif self.name == 'openai':
+            pass
+        else:
+            # return dummy embeddings
+            return np.random.rand(len(texts), embedding_dimension)
 
 class Chunker: 
     def __init__(self):
@@ -47,60 +42,58 @@ class Chunker:
         nlp.add_pipe("sentencizer")
         self.nlp = nlp
 
-    def chunk(self, texts: List[str]) -> List[List[str]]:
-        return [[sent.text for sent in doc.sents ] for doc in self.nlp.pipe(texts)]
-
+    def chunk(self, text: str) -> List[List[str]]:
+        return [sent.text for sent in self.nlp(text).sents]
+        # return [[sent.text for sent in doc.sents ] for doc in self.nlp.pipe(texts)]
 
 class Ingester:
     def __init__(
         self,
         file_to_ingest: str,
-
-        append_to_corpora: bool = False,
+        overwrite_data: bool = False,
         embedding_dimension: int = 512,
-        embedding_model_id: str = "BAAI/bge-m3",
+        embedding_model_id: Literal["bge-m3", "openai", "dummy"] = "dummy",
         sqlite_db_path: str = "./mercury.sqlite",
     ):
-        self.sources = None
-        self.summaries = None
+        self.file_to_ingest = file_to_ingest
+        self.overwrite_data = overwrite_data
         self.sqlite_db_path = sqlite_db_path
         self.embedding_dimension = embedding_dimension
-        self.append_to_corpora = append_to_corpora
-        self.file_path = file_to_ingest
+        self.embedding_model_id = embedding_model_id
 
-        self.text: Dict[str, List[str]] = {} # keys as text columns names and values as list of strings comprising the columns. 
+        self.chunker = Chunker()
+        self.embedder = Embedder(embedding_model_id)
+        self.text = {}
 
     def prepare_db(self):
+        self.db = sqlite3.connect(self.sqlite_db_path)
+        self.db.enable_load_extension(True)
+        sqlite_vec.load(self.db)
+        self.db.enable_load_extension(False)
 
-        db = sqlite3.connect("mercury.sqlite")
-        db.enable_load_extension(True)
-        sqlite_vec.load(db)
-        db.enable_load_extension(False)
+        if self.overwrite_data:
+            self.db.execute("DROP TABLE IF EXISTS chunks")
+            self.db.execute("DROP TABLE IF EXISTS embeddings")
+            self.db.commit()
 
-        if not self.append_to_corpora:
-            db.execute("DROP TABLE IF EXISTS corpus")
-            db.execute("DROP TABLE IF EXISTS embeddings")
-
-            # table 1: text chunks
-            # columns: 
-            # the id of the chunk, the id of the sample, the type of the chunk, the text of the chunk 
-            command_create_chunks = "CREATE TABLE chunks (chunk_id INTEGER PRIMARY KEY, sample_id int, offset int, length int, type TEXT, chunk TEXT)"
-            db.execute(command_create_chunks)
-
-            # table 2: embeddings of chunks 
-
-            db.execute(f"CREATE VIRTUAL TABLE embeddings USING vec0(embedding float[{self.embedding_dimension}])") # the embedding of text chunks  
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS chunks (chunk_id INTEGER PRIMARY KEY, text TEXT, text_type TEXT, sample_id INTEGER, char_offset INTEGER, chunk_offset INTEGER)"
+        )
+        self.db.execute(
+            f"CREATE VIRTUAL TABLE embeddings USING vec0(embedding float[{self.embedding_dimension}])"
+        )
+        self.db.commit()
 
     def load_data_for_ingestion(self) -> Tuple[List[str], List[str]]:
         # if file_to_ingest ends with JSONL, load it as JSONL
-        if self.file_path.endswith("jsonl"):
-            df = pandas.read_json(self.file_path, lines=True)
-        elif self.file_path.endswith("json"):
-            df = pandas.read_json(self.file_path)
-        elif self.file_path.endswith("csv"):
-            df = pandas.read_csv(self.file_path)
+        if self.file_to_ingest.endswith("jsonl"):
+            df = pandas.read_json(self.file_to_ingest, lines=True)
+        elif self.file_to_ingest.endswith("json"):
+            df = pandas.read_json(self.file_to_ingest)
+        elif self.file_to_ingest.endswith("csv"):
+            df = pandas.read_csv(self.file_to_ingest)
         else:
-            raise Exception(f"Unsupported file format in {self.file_path}")
+            raise Exception(f"Unsupported file format in {self.file_to_ingest}")
         
         df.columns = df.columns.str.lower()
 
@@ -109,99 +102,36 @@ class Ingester:
 
         self.text['source'] = sources
         self.text['summary'] = summaries
-        return sources, summaries 
     
-    def ingest_to_corpora(self, batch_size: int = 4):
-        """Chunk the data and ingest it to the the db table corpora"""
+    def ingest(self):
+        """Chunk the data, embed the chunks, and save to the database."""
 
+        global_chunk_id = 1 # the id of the chunk in tables, starting from 1
         for text_type, docs in self.text.items():
-            for i in range(0, len(docs), batch_size):
-                local_chunks = 
+            for sample_id in range(0, len(docs)): # simple, just chunk and embed one doc each time
+                char_offset = 0
+                chunks = self.chunker.chunk(docs[sample_id])
+                embeddings = self.embedder.embed(chunks, embedding_dimension=self.embedding_dimension)
+                for chunk_offset, chunk_text in enumerate(chunks):
+                    print ([global_chunk_id, chunk_text, text_type, sample_id+1, char_offset, chunk_offset])
+                    self.db.execute(
+                        "INSERT INTO chunks (chunk_id, text, text_type, sample_id, char_offset, chunk_offset) VALUES (?, ?, ?, ?, ?, ?)",
+                        [global_chunk_id, chunk_text, text_type, sample_id+1, char_offset, chunk_offset]
+                    )
+                    self.db.commit()
+                    self.db.execute(
+                        "INSERT INTO embeddings (rowid, embedding) VALUES (?, ?)",
+                        [global_chunk_id, serialize_f32(embeddings[chunk_offset])]
+                    )
+                    self.db.commit()
 
-
-
-        
-
-    def ingest_to_corpora(self):
-        sources, summaries = self.load_data_for_ingestion()
-        for index, (source, summary) in tqdm(
-            enumerate(zip(sources, summaries)),
-            total=len(sources),
-            desc="Ingesting data to Vectara",
-        ):
-            id_ = f"mercury_{index}"
-            for column in ["source", "summary"]:
-                # The name "column" does not indicate the column name, but the type of text
-                text = source if column == "source" else summary
-                corpus_id = (
-                    self.source_corpus_id
-                    if column == "source"
-                    else self.summary_corpus_id
-                )
-                text_info = self.split_text_into_chunks(text)
-                self.vectara_client.create_document_from_chunks(
-                    corpus_id=corpus_id,
-                    chunks=text_info["chunks"],
-                    chunk_metadata=text_info["chunk_metadata"],  # type: ignore
-                    doc_id=id_,
-                    doc_metadata={"type": column, "text": text},
-                )
-
-    # def split_text_into_sections(self, text: str) -> list[SectionSlice]:
-    #     section = []
-    #     offset = 0
-    #     for index, item in enumerate(text.split(".")):
-    #         section.append({
-    #             "_id": index + 1,
-    #             "offset": offset,
-    #             "text": item
-    #         })
-    #         offset += len(item) + 1
-    #     return section
-
-    # def split_text_into_sections(self, text: str) -> tuple[list[int], list[int], list[str]]:
-    #     ids = []
-    #     offsets = []
-    #     strs = []
-    #     offset = 0
-    #     for index, item in enumerate(text.split(".")):
-    #         ids.append(index + 1)
-    #         offsets.append(offset)
-    #         strs.append(item)
-    #         offset += len(item) + 1
-    #     return ids, offsets, strs
-
-    def split_text_into_chunks(self, text: str) -> FullChunksWithMetadata:
-        chunks: list[OwnChunk] = []
-        full_doc_len = len(text)
-        offset = 0
-        strings = []
-        for index, item in enumerate(text.split(".")):
-            id_ = index + 1
-            true_offset = offset
-            chunks.append(
-                {
-                    "_id": id_,
-                    "true_offset": true_offset,
-                    "true_len": len(item),
-                }
-            )
-            strings.append(item)
-            offset += len(item) + 1
-        return {
-            "chunk_metadata": chunks,
-            "chunks_len": len(chunks),
-            "full_doc_len": full_doc_len,
-            "chunks": strings,
-        }
+                    char_offset += len(chunk_text) + 1 # +1 for the space between sentences. 
+                    global_chunk_id += 1
 
     def main(self):  # or become __call__
-        return self.ingest_to_corpora()
-
-
-# client = BetterVectara()
-# a = client.read_corpus([13], read_filter_attributes=True)
-# print(a)
+        self.prepare_db()
+        self.load_data_for_ingestion()
+        self.ingest()
 
 if __name__ == "__main__":
     import argparse
@@ -216,51 +146,33 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("file_to_ingest", type=str, help="Path to the file to ingest")
     parser.add_argument(
-        "--source_corpus_id",
-        type=int,
-        help="Source Corpus ID",
-        default=get_env_id_value("SOURCE_CORPUS_ID"),
-    )
-    parser.add_argument(
-        "--summary_corpus_id",
-        type=int,
-        help="Summary Corpus ID",
-        default=get_env_id_value("SUMMARY_CORPUS_ID"),
-    )
-    parser.add_argument(
-        "--annotation_corpus_id",
-        type=int,
-        help="Annotation Corpus ID",
-        default=get_env_id_value("ANNOTATION_CORPUS_ID"),
-    )
-    parser.add_argument(
-        "--overwrite_corpora",
+        "--overwrite_data",
         action="store_true",
-        help="Whether to overwrite existing corpora",
+        default=False,
+        help="If True, overwrite the data store in database. If False (default), append to the existing data.",
+    )
+    parser.add_argument(
+        "--embedding_model_id",
+        type=str,
+        default="dummy",
+        help="The ID of the embedding model to usej. Currently supports 'bge-m3', 'openai', and 'dummy'.",
+    )
+    parser.add_argument(
+        "--embedding_dimension",
+        type=int,
+        default=512,
+        help="The dimension of the embeddings",
     )
     args = parser.parse_args()
 
-    print("Uploading data to Vectara...")
+    print("Ingesting data")
     ingester = Ingester(
         file_to_ingest=args.file_to_ingest,
-        source_corpus_id=args.source_corpus_id,
-        summary_corpus_id=args.summary_corpus_id,
-        annotation_corpus_id=args.annotation_corpus_id,
-        overwrite_corpora=args.overwrite_corpora,
+        overwrite_data=args.overwrite_data,
+        embedding_dimension=args.embedding_dimension,
+        embedding_model_id=args.embedding_model_id,
     )
     ingester.main()
 
-    print(f"Uploaded!")
+    print(f"Ingested!")
 
-    if (
-        not args.source_corpus_id
-        or not args.summary_corpus_id
-        or not args.annotation_corpus_id
-    ):
-        print("Please add the following lines to your .env file:")
-        if not args.source_corpus_id:
-            print(f"SOURCE_CORPUS_ID={ingester.source_corpus_id}")
-        if not args.summary_corpus_id:
-            print(f"SUMMARY_CORPUS_ID={ingester.summary_corpus_id}")
-        if not args.annotation_corpus_id:
-            print(f"ANNOTATION_CORPUS_ID={ingester.annotation_corpus_id}")
