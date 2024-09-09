@@ -19,19 +19,24 @@ def serialize_f32(vector: List[float]) -> bytes:
     return struct.pack("%sf" % len(vector), *vector)
 
 class Embedder: 
-    def __init__(self, name: Literal['bge-m3', 'openai']):
+    def __init__(self, name: Literal['bge-m3', 'openai', 'multi-qa-mpnet-base-dot-v1']) -> None:
         self.name = name 
         if name == 'bge-m3':
             from FlagEmbedding import BGEM3FlagModel
             self.model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=True) 
+        elif 'openai' in name:
+            from openai import OpenAI
+            self.model = OpenAI()
     
     def embed(self, texts: List[str], embedding_dimension: int= 512,  batch_size:int = 12) -> np.ndarray:
         """The function that takes a list of strings and returns a numpy array of their embeddings.
         """
         if self.name == 'bge-m3':
             return self.model.encode(texts, batch_size=batch_size, max_length=embedding_dimension)['dense_vecs']
-        elif self.name == 'openai':
-            pass
+        elif "openai" in self.name:
+            openai_model_id = self.name.split("/")[-1]
+            response  = self.model.embeddings.create(input=texts, model=openai_model_id, dimensions=embedding_dimension)
+            return np.array([item.embedding for item in response.data])
         else:
             # return dummy embeddings
             return np.random.rand(len(texts), embedding_dimension)
@@ -52,7 +57,7 @@ class Ingester:
         file_to_ingest: str,
         overwrite_data: bool = False,
         embedding_dimension: int = 512,
-        embedding_model_id: Literal["bge-m3", "openai", "dummy"] = "dummy",
+        embedding_model_id: Literal["bge-m3", "openai/text-embedding-3-small", "dummy"] = "dummy",
         sqlite_db_path: str = "./mercury.sqlite",
     ):
         self.file_to_ingest = file_to_ingest
@@ -155,7 +160,7 @@ if __name__ == "__main__":
         "--embedding_model_id",
         type=str,
         default="dummy",
-        help="The ID of the embedding model to usej. Currently supports 'bge-m3', 'openai', and 'dummy'.",
+        help="The ID of the embedding model to usej. Currently supports 'bge-m3', 'openai/{text-embedding-3-small, text-embedding-3-large}', and 'dummy'.",
     )
     parser.add_argument(
         "--embedding_dimension",
@@ -176,3 +181,20 @@ if __name__ == "__main__":
 
     print(f"Ingested!")
 
+    print (f"Run a test query to check the data")
+
+
+    import sqlite3
+    import sqlite_vec
+
+    db = sqlite3.connect('mercury.sqlite')
+    db.enable_load_extension(True)
+    sqlite_vec.load(db)
+    db.enable_load_extension(False)
+
+    rows = db.execute(
+        "SELECT rowid, distance FROM embeddings WHERE embedding MATCH ? and rowid in (4, 5) ORDER BY distance LIMIT 5",
+        [[0.08553484082221985, 0.21519172191619873, 0.46908700466156006, 0.8522521257400513]]
+    ).fetchall()
+
+    print(rows)
