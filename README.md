@@ -122,6 +122,13 @@ Meaning of select columns:
 * `src_chunk_id` and `summ_chunk_id` are the `id`'s of chunks in the `corpus` table.
 * `text_spans` is a JSON text field that stores the text spans selected by the annotator. Each entry is a dictionary where keys must be those in the `text_type` column in the `chunks` table (hardcoded to  `source` and `summary` now) and the values are lists of two integers: the start and end indices of the text span in the chunk. For extrinsic hallucinations (no connection to the source at all), only `summary`-key items. The reason we use JSON here is that SQLite does not support array types.
 
+#### `config` table: the configuration
+
+| key      | value |
+|----------|-------|
+| embdding_model | "openai/text-embedding-3-small" |
+| embdding_dimension | 4 |
+
 ### How to do vector search
 
 SQLite-vec uses Euclidean distance for vector search. So all embeddings much be normalized to unit length. Fortunately, OpenAI and Sentence-Bert's embeddings are already normalized.

@@ -92,6 +92,7 @@ class Ingester:
         if self.overwrite_data:
             self.db.execute("DROP TABLE IF EXISTS chunks")
             self.db.execute("DROP TABLE IF EXISTS embeddings")
+            self.db.execute("DROP TABLE IF EXISTS config")
             self.db.commit()
 
         self.db.execute(
@@ -99,6 +100,17 @@ class Ingester:
         )
         self.db.execute(
             f"CREATE VIRTUAL TABLE embeddings USING vec0(embedding float[{self.embedding_dimension}])"
+        )
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)"
+        )
+        self.db.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES ('embedding_model_id', ?)",
+            [self.embedding_model_id],
+        )
+        self.db.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES ('embedding_dimension', ?)",
+            [self.embedding_dimension],
         )
         self.db.commit()
 

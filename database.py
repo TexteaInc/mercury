@@ -128,8 +128,8 @@ class AnnotationData(TypedDict):
     #              "source_end", "consistent", "task_index", "user_id"])
     # return annotations
 
-
 class Database:
+# class Annotate:
     # def __init__(self, annotation_corpus_id: int, vectara_client: Vectara = Vectara()):
     def __init__(self, sqlite_db_path: str):
         self.lock = threading.Lock()
@@ -165,6 +165,90 @@ class Database:
                 return result
             return wrapper
         return decorator
+
+    def fetch_data_for_labeling(self):
+        """Fetch the source-summary pairs for labeling from the database."""
+
+        data_for_labeling = {}
+        sectioned_chunks = {} 
+        # db = sqlite3.connect(sqlite_db_path)
+        db = self.db
+        texts = db.execute("SELECT text, text_type, sample_id, chunk_offset FROM chunks").fetchall()
+        """ texts = 
+        [('The quick brown fox.', 'source', 1, 0),
+        ('Jumps over a lazy dog.', 'source', 1, 1),
+        ('We the people.', 'source', 2, 0),
+        ('Of the U.S.A.', 'source', 2, 1),
+        ('26 letters.', 'summary', 1, 0),
+        ('The U.S. Constitution.', 'summary', 2, 0),
+        ('It is great.', 'summary', 2, 1)]
+        """
+        for text, text_type, sample_id, chunk_offset in texts:
+            sectioned_chunks.setdefault(sample_id, {}).setdefault(text_type, {})[chunk_offset] = text
+            # levels: sample_id -> text_type -> chunk_offset -> text
+
+        # sort chunks by chunk_offset as dictionary 
+        for sample_id in sectioned_chunks:
+            for text_type in sectioned_chunks[sample_id]:
+                sectioned_chunks[sample_id][text_type] = dict(sorted(sectioned_chunks[sample_id][text_type].items()))
+
+        """ sectioned_chunks =
+        {
+            1: {
+                'source': {
+                    0: 'The quick brown fox.',
+                    1: 'Jumps over a lazy dog.'
+                }, 
+                'summary': {
+                    0: '26 letters.'
+                }
+            },
+            2: {
+                'source': {
+                    0: 'We the people.',
+                    1: 'Of the U.S.A.'
+                }, 
+                'summary': {
+                    0: 'The U.S. Constitution.',
+                    1: 'It is great.'
+                }
+            }
+        """
+
+        data_for_labeling = [
+            {
+                "_id": str(sample_id), 
+                "source": " ".join(sectioned_chunks[sample_id]["source"].values()),
+                "summary": " ".join(sectioned_chunks[sample_id]["summary"].values())
+            }
+            for sample_id in sectioned_chunks
+        ]
+
+        """ data_for_labeling =
+        [
+            {
+                '_id': '1',
+                'source': 'The quick brown fox. Jumps over a lazy dog.',
+                'summary': '26 letters.'
+            },
+            {
+                '_id': '2',
+                'source': 'We the people. Of the U.S.A.',
+                'summary': 'The U.S. Constitution. It is great.'
+            }
+        ]
+        """
+
+        # sort data_for_labeling by sample_id
+        data_for_labeling.sort(key=lambda x: int(x["_id"]))
+
+        return data_for_labeling
+    
+    def fetch_configs(self):
+        # db = sqlite3.connect(sqlite_db_path)
+        db = self.db
+        configs = db.execute("SELECT key, value FROM config").fetchall()
+        return {key: value for key, value in configs}
 
     @database_lock()
     def push_annotation(self, label_data: OldLabelData):
@@ -275,7 +359,8 @@ class Database:
             }, "new2old"))
 
     @database_lock()
-    def dump_all_data(
+    # def dump_all_data(
+    def dump_annotation(
             self,
             dump_file: str = "mercury_annotations.json",
             # source_corpus_id: int | None = None,
