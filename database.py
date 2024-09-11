@@ -147,7 +147,7 @@ class Database:
         # prepare the database
         db = sqlite3.connect(sqlite_db_path)
         db.execute("CREATE TABLE IF NOT EXISTS annotations (\
-                   annot_id INTEGER PRIMARY KEY AUTO_INCREMENT, \
+                   annot_id INTEGER PRIMARY KEY AUTOINCREMENT, \
                    sample_id INTEGER, \
                    annot_spans TEXT, \
                    annotator TEXT, \
@@ -181,13 +181,13 @@ class Database:
         #     return
 
         sql_cmd = "SELECT * FROM annotations WHERE sample_id = ? AND annot_spans = ? AND annotator = ? AND label = ?"
-        self.db.execute(sql_cmd, (
+        res = self.db.execute(sql_cmd, (
             label_data["sample_id"],
             json.dumps(label_data["annot_spans"]),
             label_data["annotator"],
             label_data["label"]
         ))
-        if self.db.fetchone() is not None:
+        if res.fetchone() is not None:
             return
 
         # record_id = uuid.uuid4().hex # No need for this line in SQLite because it auto-increments
@@ -240,8 +240,8 @@ class Database:
     def export_user_data(self, annotator: str) -> list[LabelData]:
         # return self.annotations[self.annotations["user_id"] == user_id].to_dict(orient="records")
         sql_cmd = "SELECT * FROM annotations WHERE annotator = ?"
-        self.db.execute(sql_cmd, (annotator,))
-        annotations = self.db.fetchall()
+        res = self.db.execute(sql_cmd, (annotator,))
+        annotations = res.fetchall()
         label_data = [] # in OldLabelData format
         for annot_id, sample_id, annot_spans, annotator, label in annotations:
             annot_spans = json.loads(annot_spans)
@@ -261,8 +261,8 @@ class Database:
         #         (self.annotations["task_index"] == task_index)
         #     ].to_dict(orient="records")
         sql_cmd = "SELECT * FROM annotations WHERE annotator = ? AND sample_id = ?"
-        self.db.execute(sql_cmd, (annotator, sample_id))
-        annotations = self.db.fetchall()
+        res = self.db.execute(sql_cmd, (annotator, sample_id))
+        annotations = res.fetchall()
         label_data = []
         for annot_id, sample_id, annot_spans, annotator, label in annotations:
             annot_spans = json.loads(annot_spans)
@@ -371,8 +371,8 @@ class Database:
         # return result
 
         sql_cmd = "SELECT * FROM annotations"
-        self.db.execute(sql_cmd)
-        annotations = self.db.fetchall()
+        res = self.db.execute(sql_cmd)
+        annotations = res.fetchall()
 
         # match annotations with chunks by doc_id
         results = []
@@ -381,8 +381,8 @@ class Database:
             full_texts = {}
             for text_type in ["source", "summary"]:
                 sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
-                self.db.execute(sql_cmd, (sample_id, text_type))
-                text = self.db.fetchall()
+                res = self.db.execute(sql_cmd, (sample_id, text_type))
+                text = res.fetchall()
                 full_texts[text_type] = " ".join(text)
             
             result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": label}

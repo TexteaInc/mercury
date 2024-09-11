@@ -59,7 +59,7 @@ except KeyError:
     )
 ##### End of preparing corpus IDs #####
 
-database = Database(annotation_corpus_id)
+database = Database("./mercury.sqlite")
 
 # def fetch_data_for_labeling(source_corpus_id, summary_corpus_id):
 #     """Fetch the source-summary pairs for labeling from Vectara server."""
