@@ -61,27 +61,24 @@ except KeyError:
 
 database = Database(annotation_corpus_id)
 
+# def fetch_data_for_labeling(source_corpus_id, summary_corpus_id):
+#     """Fetch the source-summary pairs for labeling from Vectara server."""
+#     data_for_labeling = {}
+#     for doc_type in ["source", "summary"]:
+#         corpus_id = source_corpus_id if doc_type == "source" else summary_corpus_id
+#         for doc in vectara_client.list_all_documents(corpus_id):
+#             id_ = doc["id"]
+#             for metadata in doc["metadata"]:
+#                 if metadata["name"] == "text":
+#                     text = metadata["value"]
+#             data_for_labeling.setdefault(id_, {})[doc_type] = text
+
+#     data_for_labeling = [{"_id": k, **v} for k, v in data_for_labeling.items()]
+#     data_for_labeling.sort(key=lambda x: int(x["_id"].split("_")[1]))
+#     return data_for_labeling
 
 
-
-def fetch_data_for_labeling(source_corpus_id, summary_corpus_id):
-    """Fetch the source-summary pairs for labeling from Vectara server."""
-    data_for_labeling = {}
-    for doc_type in ["source", "summary"]:
-        corpus_id = source_corpus_id if doc_type == "source" else summary_corpus_id
-        for doc in vectara_client.list_all_documents(corpus_id):
-            id_ = doc["id"]
-            for metadata in doc["metadata"]:
-                if metadata["name"] == "text":
-                    text = metadata["value"]
-            data_for_labeling.setdefault(id_, {})[doc_type] = text
-
-    data_for_labeling = [{"_id": k, **v} for k, v in data_for_labeling.items()]
-    data_for_labeling.sort(key=lambda x: int(x["_id"].split("_")[1]))
-    return data_for_labeling
-
-
-tasks = fetch_data_for_labeling(source_corpus_id, summary_corpus_id)
+# tasks = fetch_data_for_labeling(source_corpus_id, summary_corpus_id)
 # TODO: the name 'tasks' can be misleading. It should be changed to something more descriptive.
 
 # TODO: pass the sqlite_db_path from CMD
@@ -162,6 +159,9 @@ def fetch_data_for_labeling(sqlite_db_path: str= "./mercury.sqlite"):
 
     return data_for_labeling
 
+tasks = fetch_data_for_labeling("./mercury.sqlite")
+# TODO: the name 'tasks' can be misleading. It should be changed to something more descriptive.
+
 class Label(BaseModel):
     summary_start: int
     summary_end: int
@@ -169,19 +169,18 @@ class Label(BaseModel):
     source_end: int
     consistent: bool
 
-
 class Selection(BaseModel):
     start: int
     end: int
     from_summary: bool
 
 
-@app.get("/user/new")
+@app.get("/user/new") # please update the route name to be more meaningful, e.g., /user/new_user
 async def create_new_user():
     return {"key": uuid.uuid4().hex}
 
 
-@app.get("/user/export")
+@app.get("/user/export") # please update the route name to be more meaningful, e.g., /user/export_user_data
 async def export_user_data(user_key: Annotated[str, Header()]):
     if user_key.startswith('"') and user_key.endswith('"'):
         user_key = user_key[1:-1]
@@ -224,11 +223,11 @@ async def post_task(task_index: int, label: Label, user_key: Annotated[str, Head
         task_index=task_index,
         user_id=user_key,
     )
-    database.push_annotation(label_data)
+    database.push_annotation(label_data) # the label_data is in databse.OldLabelData format
     return {"message": "success"}
 
 
-@app.post("/task/{task_index}/select")
+@app.post("/task/{task_index}/select") # TODO: to be updated by Forrest using openAI's API or local model to embed text on the fly
 async def post_selections(task_index: int, selection: Selection):
     if task_index >= len(tasks):
         return {"error": "Invalid task index"}
@@ -241,6 +240,9 @@ async def post_selections(task_index: int, selection: Selection):
         else tasks[task_index]["summary"][selection.start : selection.end]
     )
     id_ = tasks[task_index]["_id"]
+
+
+
     response = vectara_client.query(
         corpus_id=use_id,
         query=query,
@@ -250,6 +252,7 @@ async def post_selections(task_index: int, selection: Selection):
         metadata_filter=f"doc.id = '{id_}'",
         do_generation=False,
     )
+
     selections = []
     for i in response["responseSet"][0]["response"]:
         score = i["score"]
@@ -273,7 +276,7 @@ async def post_selections(task_index: int, selection: Selection):
 @app.delete("/record/{record_id}")
 async def delete_annotation(record_id: str, user_key: Annotated[str, Header()]):
     database.delete_annotation(record_id, user_key)
-    return {"message": "success"}
+    return {"message": f"delete anntation {record_id} success"}
 
 
 @app.get("/history")  # redirect route to history.html

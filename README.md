@@ -114,13 +114,13 @@ Meaning of select columns:
 
 #### `annotations` table: the human annotations
 
-| annot_id | doc_id | chunk_ids                  | annotator | label      |
-|----------|--------|----------------------------|-----------|------------|
-| 1        | 1      | {'source': 1, 'summary':2} | Alice     | ambivalent |
-| 2        | 1      | {'summary': 2}             | Bob       | extrinsic  |
+| annot_id | sample _id | annot_spans                              |  annotator | label      |
+|----------|------------|-----------------------------------------|-----------|------------|
+| 1        | 1          | {'source': (1, 10), 'summary': (7, 10)} | Alice     | ambivalent |
+| 2        | 1          | {'summary': (2, 8)}                     | Bob       | extrinsic  |
 
 * `src_chunk_id` and `summ_chunk_id` are the `id`'s of chunks in the `corpus` table.
-* `chunk_ids` is a JSON text field that stores the IDs of the chunks in this annotation. Each entry is a dictionary where keys much be those in `text_type` column of the `chunks` table and values are `chunk_id` in the `chunks` table. For extrinsic hallucinations (no connection to the source at all), only `summary`-key items. The reason we use JSON here is that SQLite does not support array types.
+* `text_spans` is a JSON text field that stores the text spans selected by the annotator. Each entry is a dictionary where keys must be those in the `text_type` column in the `chunks` table (hardcoded to  `source` and `summary` now) and the values are lists of two integers: the start and end indices of the text span in the chunk. For extrinsic hallucinations (no connection to the source at all), only `summary`-key items. The reason we use JSON here is that SQLite does not support array types.
 
 ### How to do vector search
 
