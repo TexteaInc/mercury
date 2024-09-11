@@ -104,6 +104,10 @@ class Selection(BaseModel):
     end: int
     from_summary: bool
 
+@app.get("/candidate_labels") 
+async def get_labels() -> List[str]: # get all candidate labels for human annotators to choose from
+    return ["consistent", "inconsistent", "not sure"]
+
 @app.get("/user/new") # please update the route name to be more meaningful, e.g., /user/new_user
 async def create_new_user():
     return {"key": uuid.uuid4().hex}
