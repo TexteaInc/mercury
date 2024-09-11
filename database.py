@@ -152,6 +152,9 @@ class Database:
                    annot_spans TEXT, \
                    annotator TEXT, \
                    label TEXT)")
+        db.enable_load_extension(True)
+        sqlite_vec.load(db)
+        db.enable_load_extension(False)
         db.commit()
         self.db = db # Forrst is unsure whether it is a good idea to keep the db connection open
 
@@ -294,19 +297,19 @@ class Database:
         #     doc_metadata=label_data,  # type: ignore
         # )
 
-        label_data = convert_LabelData(label_data, "old2new")
+        # label_data = convert_LabelData(label_data, "old2new")
 
         sql_cmd = "INSERT INTO annotations (sample_id, annot_spans, annotator, label) VALUES (?, ?, ?, ?)"
         self.db.execute(sql_cmd, (
             label_data["sample_id"],
             json.dumps(label_data["annot_spans"]),
-            label_data["annnotator"],
+            label_data["annotator"],
             label_data["label"]))
         self.db.commit()
 
     @database_lock()
     # def delete_annotation(self, record_id: str, user_id: str):
-    def delete_annotation(self, sample_id: str, annotator: str):
+    def delete_annotation(self, record_id: str, annotator: str):
         # if not (
         #         (self.annotations["record_id"] == record_id)
         #         & (self.annotations["user_id"] == user_id)
@@ -315,8 +318,8 @@ class Database:
         # record_index = self.annotations[self.annotations["record_id"] == record_id].index
         # self.annotations.drop(record_index, inplace=True)
         # self.vectara_client.delete_document(self.annotation_corpus_id, record_id)
-        sql_cmd = "DELETE FROM annotations WHERE sample_id = ? AND annotator = ?"
-        self.db.execute(sql_cmd, (sample_id, annotator))
+        sql_cmd = "DELETE FROM annotations WHERE annot_id = ? AND annotator = ?"
+        self.db.execute(sql_cmd, (int(record_id), annotator))
         self.db.commit()
 
     @database_lock()
@@ -336,6 +339,7 @@ class Database:
                 "annotator": annotator,
                 "label": label
             }, "new2old"))
+        return label_data
 
     @database_lock()
     # def export_task_history(self, task_index: int, user_id: str) -> list[LabelData]:
@@ -357,6 +361,7 @@ class Database:
                 "annotator": annotator,
                 "label": label
             }, "new2old"))
+        return label_data
 
     @database_lock()
     # def dump_all_data(
@@ -478,7 +483,7 @@ class Database:
             results.append(result_local)
 
         with open(dump_file, "w") as f:
-            json.dump(results, f, indent=s, ensure_ascii=False)
+            json.dump(results, f, indent=4, ensure_ascii=False)
             #TODO add JSONL support. Automatically detect file format based on filename extension
 
 
@@ -507,4 +512,4 @@ if __name__ == "__main__":
     db_obj = Database(args.sqlite_db_path)
     print(f"Dumping all data to {args.dump_file}")
     # db.dump_all_data(args.dump_file, args.source_corpus_id, args.summary_corpus_id)
-    db_obj.dump_all_data(args.dump_file)
+    db_obj.dump_annotation(args.dump_file)

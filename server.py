@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import List
 
 load_dotenv()
 
@@ -88,7 +89,7 @@ database = Database("./mercury.sqlite")
 
 tasks = database.fetch_data_for_labeling()
 configs = database.fetch_configs()
-embedder = Embedder(configs["embedding_model_id"], configs["embedding_dimension"])
+embedder = Embedder(configs["embedding_model_id"])
 # TODO: the name 'tasks' can be misleading. It should be changed to something more descriptive.
 
 class Label(BaseModel):
@@ -140,18 +141,34 @@ async def post_task(task_index: int, label: Label, user_key: Annotated[str, Head
     if user_key.startswith('"') and user_key.endswith('"'):
         user_key = user_key[1:-1]
 
-    label_data = LabelData(
-        record_id="not assigned",
-        sample_id=tasks[task_index]["_id"],
-        summary_start=label.summary_start,
-        summary_end=label.summary_end,
-        source_start=label.source_start,
-        source_end=label.source_end,
-        consistent=label.consistent,
-        task_index=task_index,
-        user_id=user_key,
-    )
-    database.push_annotation(label_data) # the label_data is in databse.OldLabelData format
+    # label_data = LabelData(
+    #     record_id="not assigned",
+    #     sample_id=tasks[task_index]["_id"],
+    #     summary_start=label.summary_start,
+    #     summary_end=label.summary_end,
+    #     source_start=label.source_start,
+    #     source_end=label.source_end,
+    #     consistent=label.consistent,
+    #     task_index=task_index,
+    #     user_id=user_key,
+    # )
+    
+    sample_id = task_index
+    annot_spans = {}
+    if label.summary_start != -1:
+        annot_spans["summary"] = (label.summary_start, label.summary_end)
+    if label.source_start != -1:
+        annot_spans["source"] = (label.source_start, label.source_end)
+    
+    annotator = user_key
+    label_ = "consistent" if label.consistent else "inconsistent"
+    
+    database.push_annotation({
+        "sample_id": sample_id,
+        "annotator": annotator,
+        "label": label_,
+        "annot_spans": annot_spans
+    }) # the label_data is in databse.OldLabelData format
     return {"message": "success"}
 
 
@@ -196,21 +213,22 @@ async def post_selections(task_index: int, selection: Selection):
         SELECT  \
             rowid, \
             distance \
-        FROM embddings \
-        where rowid in (?)  \
+        FROM embeddings \
+        WHERE rowid IN ({0})  \
         AND embedding MATCH ?  \
         ORDER BY distance \
-        LIMIT 5 \
-    "
-    vector_search_result = database.db.execute(sql_cmd, [chunk_ids_of_oppsoite_doc, serialize_f32(embedding)]).fetchall()
+        LIMIT 5;".format(', '.join('?' for _ in chunk_ids_of_oppsoite_doc))
+    search_chunk_ids = [row[0] for row in chunk_ids_of_oppsoite_doc]
+    vector_search_result = database.db.execute(sql_cmd, [*search_chunk_ids, serialize_f32(embedding)]).fetchall()
     # [(2, 0.20000001788139343), (1, 0.40000003576278687)]
     # turn this into a dict from chunk__id to distance/score
     chunk_id_to_score = {row[0]: row[1] for row in vector_search_result}
     chunk_ids_of_top_k = [row[0] for row in vector_search_result]
 
     # get the char_offset and len from the chunks table based on the chunk_ids
-    sql_cmd = "SELECT chunk_id, text, char_offset, LEN(*) FROM chunks WHERE chunk_id in (?)"
-    response = database.db.execute(sql_cmd, [chunk_ids_of_top_k]).fetchall()
+    sql_cmd = "SELECT chunk_id, text, char_offset FROM chunks WHERE chunk_id in ({0});".format(', '.join('?' for _ in chunk_ids_of_top_k))
+    search_chunk_ids = [row[0] for row in vector_search_result]
+    response = database.db.execute(sql_cmd, search_chunk_ids).fetchall()
     # [(1, 'This is a test.', 0, 14), (2, 'This is a test.', 15, 14)]
 
     # organize into a dict of keys "score", "offset", "len", "to_doc"
@@ -219,12 +237,12 @@ async def post_selections(task_index: int, selection: Selection):
     for i in response:
         score = chunk_id_to_score[i[0]]
         offset = i[2]
-        length = i[3]
+        text = i[1]
         selections.append(
             {
                 "score": score,
                 "offset": offset,
-                "len": length,
+                "len": len(text),
                 "to_doc": selection.from_summary,
             }
         )
@@ -253,6 +271,8 @@ async def post_selections(task_index: int, selection: Selection):
 
 @app.delete("/record/{record_id}")
 async def delete_annotation(record_id: str, user_key: Annotated[str, Header()]):
+    if user_key.startswith('"') and user_key.endswith('"'):
+        user_key = user_key[1:-1]
     database.delete_annotation(record_id, user_key)
     return {"message": f"delete anntation {record_id} success"}
 

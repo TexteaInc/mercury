@@ -43,7 +43,7 @@ class Embedder:
             return self.model.encode(texts, batch_size=batch_size, max_length=512)['dense_vecs']
         elif "openai" in self.name:
             openai_model_id = self.name.split("/")[-1]
-            response  = self.model.embeddings.create(input=texts, model=openai_model_id, dimensions=embedding_dimension)
+            response  = self.model.embeddings.create(input=texts, model=openai_model_id, dimensions=int(embedding_dimension))
             return np.array([item.embedding for item in response.data])
         else:
             # return dummy embeddings
