@@ -56,6 +56,8 @@ enum Stage {
 const DISABLE_QUERY = false
 
 const normalizationColor = (score: number[]) => {
+  if (score.length === 0) return []
+  if (score.length === 1) return [1]
   const minScore = Math.min(...score)
   const maxScore = Math.max(...score)
   const normalScores = []
