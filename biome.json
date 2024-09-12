@@ -30,7 +30,8 @@
         "useImportType": "warn"
       },
       "correctness": {
-        "noUnusedImports": "warn"
+        "noUnusedImports": "warn",
+        "useExhaustiveDependencies": "off"
       }
     }
   }

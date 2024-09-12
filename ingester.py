@@ -228,6 +228,8 @@ if __name__ == "__main__":
         embedding_dimension=args.embedding_dimension,
         embedding_model_id=args.embedding_model_id,
         sqlite_db_path=args.sqlite_db_path,
+        ingest_column_1=args.ingest_column_1,
+        ingest_column_2=args.ingest_column_2,
     )
     ingester.main()
 

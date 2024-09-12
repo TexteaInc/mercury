@@ -31,7 +31,9 @@ import {
 } from "../utils/request"
 import { type LabelData, type SectionResponse, type Task, userSectionResponse } from "../utils/types"
 import {
+  AddRegular,
   ArrowExportRegular,
+  ArrowSyncRegular,
   ChevronLeftRegular,
   DeleteRegular,
   EyeOffRegular,
@@ -39,6 +41,10 @@ import {
   HandRightRegular, HistoryRegular,
   IosChevronRightRegular
 } from "@fluentui/react-icons";
+import { Allotment } from "allotment"
+import "allotment/dist/style.css"
+import ColumnResize from "react-table-column-resizer";
+import "./page.css"
 
 const labelIndexAtom = atomWithStorage("labelIndex", 0)
 
@@ -58,7 +64,14 @@ const normalizationColor = (score: number[]) => {
   }
   return normalScores
 }
-const colors = ["#00a6ff", "#1cb0ff", "#38baff", "#70cdff", "#a8e1ff", "#c4ebff"]
+const colors = [
+  "#c4ebff",
+  "#a8e1ff",
+  "#70cdff",
+  "#38baff",
+  "#1cb0ff",
+  "#00a6ff",
+]
 const getColor = (score: number) => {
   return colors[Math.floor(score * (colors.length - 1))]
 }
@@ -147,7 +160,6 @@ export default function Index() {
     const func = (event) => {
       const selection = window.getSelection()
       const target = event.target as HTMLElement
-      if (target.id === "yesButton" || target.id === "noButton") return
       if (
         !selection.containsNode(document.getElementById("summary"), true) &&
         !selection.containsNode(document.getElementById("doc"), true)
@@ -235,19 +247,42 @@ export default function Index() {
       rangeId === "summary",
     )
     const sliceArray = updateSliceArray(props.text, [fakeResponse])
-    return sliceArray.map(slice => (
-      <Text
-        as="span"
-        key={`slice-${slice[0]}-${slice[1]}`}
-        data-mercury-label-start={slice[0]}
-        data-mercury-label-end={slice[1]}
-        style={{
-          backgroundColor: slice[3] === 2 ? "#79c5fb" : undefined,
-        }}
-      >
-        {props.text.slice(slice[0], slice[1] + 1)}
-      </Text>
-    ))
+    return sliceArray.map(slice => {
+      return slice[3] === 2 ? (
+        <Tooltip
+          start={slice[0]}
+          end={slice[1]}
+          key={`slice-${slice[0]}-${slice[1]}`}
+          backgroundColor="#79c5fb"
+          text={props.text.slice(slice[0], slice[1] + 1)}
+          score={99}
+          labels={labels}
+          onLabel={async (label) => {
+            if (firstRange === null || rangeId === null) {
+              return Promise.resolve()
+            }
+            await labelText(labelIndex, {
+              source_start: rangeId === "summary" ? -1 : firstRange[0],
+              source_end: rangeId === "summary" ? -1 + 1 : firstRange[1],
+              summary_start: rangeId === "summary" ? firstRange[0] : -1,
+              summary_end: rangeId === "summary" ? firstRange[1] : -1,
+              consistent: label
+            })
+            updateHistory()
+          }}
+          message="No hallucinations in this sentence?"
+        />
+      ) : (
+        <Text
+          as="span"
+          key={`slice-${slice[0]}-${slice[1]}`}
+          data-mercury-label-start={slice[0]}
+          data-mercury-label-end={slice[1]}
+        >
+          {props.text.slice(slice[0], slice[1] + 1)}
+        </Text>
+      )
+    })
   }
 
   const SliceText = (props: { text: string; slices: SectionResponse; user: [number, number] | null }) => {
@@ -289,6 +324,7 @@ export default function Index() {
                 })
                 updateHistory()
               }}
+              message="Are the two texts consistent?"
             />
             ) : (
             <Text
@@ -310,7 +346,7 @@ export default function Index() {
     const selection = window.getSelection()
     if (selection === null || selection === undefined) return
     if (!selection.containsNode(element, true)) return
-    if (selection.toString().trim() === "") return
+    if (selection.toString().trim() === "" && JSON.stringify(firstRange) !== "[-1,-1]") return
     const range = selection.getRangeAt(0)
     switch (stage) {
       case Stage.None: {
@@ -347,28 +383,54 @@ export default function Index() {
   return (
     <>
       <Title1>Mercury Label</Title1>
-      <br /><br />
-      <Button
-        icon={<HandRightRegular />}
-        onClick={washHand}
+      <br />
+      <br />
+      <div
         style={{
-          marginRight: "1em",
+          display: "flex",
+          gap: "1em",
         }}
       >
-        Wash Hand
-      </Button>
-      <Button
-        icon={<ArrowExportRegular />}
-        onClick={exportJSON}
-        style={{
-          marginRight: "1em",
-        }}
-      >
-        Export Labels
-      </Button>
-      <Link href="/history/" rel="noopener noreferrer" target="_blank">
-        <Button icon={<HistoryRegular />}>History</Button>
-      </Link>
+        {JSON.stringify(firstRange) === "[-1,-1]" || viewingRecord != null ? (
+          <Button appearance="primary" icon={<HandRightRegular />} onClick={washHand}>
+            Wash Hand
+          </Button>
+        ) : (
+          <Button icon={<HandRightRegular />} onClick={washHand}>
+            Wash Hand
+          </Button>
+        )}
+        <Button icon={<ArrowExportRegular />} onClick={exportJSON}>
+          Export Labels
+        </Button>
+        <Link href="/history/" rel="noopener noreferrer" target="_blank">
+          <Button icon={<HistoryRegular />}>History</Button>
+        </Link>
+        <Button
+          icon={<AddRegular />}
+          onClick={() => {
+            washHand()
+            setFirstRange([-1, -1])
+            setUserSelection(null)
+            setRangeId("doc")
+          }}
+          disabled={JSON.stringify(firstRange) === "[-1,-1]" && rangeId === "doc"}
+        >
+          Select Empty Source
+        </Button>
+        <Button
+          icon={<AddRegular />}
+          onClick={() => {
+            washHand()
+            setFirstRange([-1, -1])
+            setUserSelection(null)
+            setRangeId("summary")
+          }}
+          disabled={JSON.stringify(firstRange) === "[-1,-1]" && rangeId === "summary"}
+        >
+          Select Empty Summary
+        </Button>
+      </div>
       <br />
       <div
         style={{
@@ -377,7 +439,7 @@ export default function Index() {
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "2em",
+          gap: "1em",
         }}
       >
         <Button
@@ -392,7 +454,7 @@ export default function Index() {
         >
           Previous
         </Button>
-        <Field style={{flexGrow: 1}} validationMessage={`${labelIndex + 1} / ${maxIndex}`} validationState="none">
+        <Field style={{ flexGrow: 1 }} validationMessage={`${labelIndex + 1} / ${maxIndex}`} validationState="none">
           <ProgressBar value={labelIndex + 1} max={maxIndex} thickness="large" />
         </Field>
         <Button
@@ -414,130 +476,170 @@ export default function Index() {
       ) : (
         <div
           style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "baseline",
-            justifyContent: "center",
+            height: "80vh",
+            margin: "auto",
           }}
         >
-          <Card
-            style={{
-              flex: 1,
-              marginRight: "1em",
-              userSelect: waiting === "doc" ? "none" : "auto",
-              color: waiting === "doc" ? "gray" : "black",
-            }}
-          >
-            <CardHeader
-              header={
-                <Body1>
-                  <strong>Source</strong>
-                </Body1>
-              }
-            />
-            <Text
-              id="doc"
-              as="p"
-              data-mercury-label-start={0}
-              data-mercury-label-end={currentTask.doc.length}
-              onMouseUp={event => {
-                checkSelection(event.target as HTMLSpanElement)
-              }}
-            >
-              {serverSelection !== null && serverSelection.length > 0 && rangeId === "summary" ? (
-                <SliceText text={currentTask.doc} slices={serverSelection} user={userSelection} />
-              ) : rangeId === "doc" ? (
-                <JustSliceText text={currentTask.doc} startAndEndOffset={firstRange} />
-              ) : (
-                currentTask.doc
-              )}
-            </Text>
-          </Card>
-          <div style={{
-              flex: 1,
-              marginLeft: "1em",
-              display: "flex",
-              flexDirection: "column",
-            }}>
-            <Card style={{
-                userSelect: waiting === "summary" ? "none" : "auto",
-                color: waiting === "summary" ? "gray" : "black",
-              }}
-            >
-              <CardHeader
-                header={
-                  <Body1>
-                    <strong>Summary</strong>
-                  </Body1>
-                }
-              />
-              <Text
-                id="summary"
-                as="p"
-                data-mercury-label-start={0}
-                data-mercury-label-end={currentTask.sum.length}
-                onMouseUp={event => checkSelection(event.target as HTMLSpanElement)}
+          <Allotment>
+            <Allotment.Pane>
+              <div
+                style={{
+                  overflowY: "scroll",
+                  height: "100%",
+                }}
               >
-                {serverSelection !== null && rangeId === "doc" ? (
-                  <SliceText text={currentTask.sum} slices={serverSelection} user={userSelection} />
-                ) : rangeId === "summary" ? (
-                  <JustSliceText text={currentTask.sum} startAndEndOffset={firstRange} />
-                ) : (
-                  currentTask.sum
-                )}
-              </Text>
-            </Card>
-            <br />
-            <Card>
-              <CardHeader
-                  header={
-                    <Body1>
-                      <strong>History</strong>
-                    </Body1>
-                  }
-              />
-              {history === null ? (
-                <p>Loading...</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {historyColumns.map(column => (
-                        <TableHeaderCell key={column.columnKey}>{column.label}</TableHeaderCell>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {
-                      history.sort((a, b) => {
-                        let c = a.source_start - b.source_start
-                        if (c !== 0) c = a.summary_start - b.summary_start
-                        return c
-                      }).map((record, index) => (
-                        <TableRow key={record.record_id}>
-                          <TableCell>{currentTask.sum.slice(record.summary_start, record.summary_end)}</TableCell>
-                          <TableCell>{currentTask.doc.slice(record.source_start, record.source_end)}</TableCell>
-                          <TableCell>{record.consistent}</TableCell>
-                          <TableCell>
-                            {
-                              viewingRecord != null && viewingRecord.record_id === record.record_id ?
-                                  <Button icon={<EyeOffRegular />} onClick=
-                                      {() => setViewingRecord(null)}>Restore</Button> :
-                                  <Button icon={<EyeRegular />} onClick=
-                                      {() => {setViewingRecord(record)}}>View</Button>
-                            }
-                            <Button icon={<DeleteRegular />} onClick={() => {
-                              deleteRecord(record.record_id).then(updateHistory)
-                            }}>Delete</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                <Card
+                  style={{
+                    userSelect: waiting === "doc" ? "none" : "auto",
+                    color: waiting === "doc" ? "gray" : "black",
+                  }}
+                >
+                  <CardHeader
+                    header={
+                      <Body1>
+                        <strong>Source</strong>
+                      </Body1>
                     }
-                  </TableBody>
-                </Table>
-              )}
-              </Card>
-          </div>
+                  />
+                  <Text
+                    id="doc"
+                    as="p"
+                    data-mercury-label-start={0}
+                    data-mercury-label-end={currentTask.doc.length}
+                    onMouseUp={event => {
+                      checkSelection(event.target as HTMLSpanElement)
+                    }}
+                  >
+                    {serverSelection !== null && serverSelection.length > 0 && rangeId === "summary" ? (
+                      <SliceText text={currentTask.doc} slices={serverSelection} user={userSelection} />
+                    ) : rangeId === "doc" ? (
+                      <JustSliceText text={currentTask.doc} startAndEndOffset={firstRange} />
+                    ) : (
+                      currentTask.doc
+                    )}
+                  </Text>
+                </Card>
+              </div>
+            </Allotment.Pane>
+            <Allotment.Pane>
+              <Allotment vertical>
+                <div
+                  style={{
+                    overflowY: "scroll",
+                    height: "100%",
+                  }}
+                >
+                  <Card
+                    style={{
+                      userSelect: waiting === "summary" ? "none" : "auto",
+                      color: waiting === "summary" ? "gray" : "black",
+                    }}
+                  >
+                    <CardHeader
+                      header={
+                        <Body1>
+                          <strong>Summary</strong>
+                        </Body1>
+                      }
+                    />
+                    <Text
+                      id="summary"
+                      as="p"
+                      data-mercury-label-start={0}
+                      data-mercury-label-end={currentTask.sum.length}
+                      onMouseUp={event => checkSelection(event.target as HTMLSpanElement)}
+                    >
+                      {serverSelection !== null && rangeId === "doc" ? (
+                        <SliceText text={currentTask.sum} slices={serverSelection} user={userSelection} />
+                      ) : rangeId === "summary" ? (
+                        <JustSliceText text={currentTask.sum} startAndEndOffset={firstRange} />
+                      ) : (
+                        currentTask.sum
+                      )}
+                    </Text>
+                  </Card>
+                </div>
+                <div
+                  style={{
+                    overflowY: "scroll",
+                    height: "100%",
+                  }}
+                >
+                  <Card>
+                    <CardHeader
+                      header={
+                        <Body1>
+                          <strong>History</strong>
+                          <Button icon={<ArrowSyncRegular />} style={{ marginLeft: "1em" }} onClick={updateHistory}>
+                            Refresh
+                          </Button>
+                        </Body1>
+                      }
+                    />
+                    {history === null ? (
+                      <p>Loading...</p>
+                    ) : (
+                      <Table className="column_resize_table">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHeaderCell key="summary">Summary</TableHeaderCell>
+                            <ColumnResize id={1} className="columnResizer" />
+                            <TableHeaderCell key="source">Source</TableHeaderCell>
+                            <ColumnResize id={2} className="columnResizer" />
+                            <TableHeaderCell key="consistent">Consistent</TableHeaderCell>
+                            <ColumnResize id={3} className="columnResizer" />
+                            <TableHeaderCell key="actions">Actions</TableHeaderCell>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {history
+                            .sort((a, b) => {
+                              let c = a.source_start - b.source_start
+                              if (c === 0) c = a.summary_start - b.summary_start
+                              return c
+                            })
+                            .map((record, index) => (
+                              <TableRow key={record.record_id}>
+                                <TableCell>{currentTask.sum.slice(record.summary_start, record.summary_end)}</TableCell>
+                                <TableCell className="column_resizer_body" />
+                                <TableCell>{currentTask.doc.slice(record.source_start, record.source_end)}</TableCell>
+                                <TableCell className="column_resizer_body" />
+                                <TableCell>{record.consistent}</TableCell>
+                                <TableCell className="column_resizer_body" />
+                                <TableCell>
+                                  {viewingRecord != null && viewingRecord.record_id === record.record_id ? (
+                                    <Button icon={<EyeOffRegular />} appearance="primary" onClick={washHand}>
+                                      Restore
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      icon={<EyeRegular />}
+                                      onClick={() => {
+                                        setViewingRecord(record)
+                                      }}
+                                    >
+                                      Preview
+                                    </Button>
+                                  )}
+                                  <Button
+                                    icon={<DeleteRegular />}
+                                    onClick={() => {
+                                      deleteRecord(record.record_id).then(updateHistory)
+                                    }}
+                                  >
+                                    Delete
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </Card>
+                </div>
+              </Allotment>
+            </Allotment.Pane>
+          </Allotment>
         </div>
       )}
     </>

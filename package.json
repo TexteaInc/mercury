@@ -15,7 +15,9 @@
     "lodash": "^4.17.21",
     "next": "latest",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-table-column-resizer": "^1.2.3",
+    "allotment": "^1.20.2"
   },
   "devDependencies": {
     "@biomejs/biome": "1.6.4",

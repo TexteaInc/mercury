@@ -24,6 +24,7 @@ const Tooltip = (props: {
   onLabel: (label: string) => Promise<void>
   start: number
   end: number
+  message: string
 }) => {
   const [isOpen, setOpen] = useState(false)
   const { refs, floatingStyles, context } = useFloating({
@@ -72,11 +73,15 @@ const Tooltip = (props: {
           }}
           {...getFloatingProps()}
         >
-          {props.score <= 1 ? <Title3>Matchness: {props.score}</Title3> : <Title3>Labeling</Title3>}
+          {props.score <= 50 ? <Title3>Matchness: {props.score}</Title3> : <Title3>Labeling</Title3>}
           <br />
-          <Text as="p">Are the two texts consistent?</Text>
+          <Text as="p">{props.message}</Text>
           <br />
-          <div>
+          <div style={{
+            display: "flex",
+            gap: "1rem",
+            flexWrap: "wrap",
+          }}>
             {props.labels.map((label, index) => (
               <Button
                 id={`label-${label}-${index}-${props.start}`}
