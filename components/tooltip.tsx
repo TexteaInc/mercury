@@ -4,6 +4,7 @@ import {
   offset,
   safePolygon,
   shift,
+  useClick,
   useClientPoint,
   useDismiss,
   useFloating,
@@ -19,8 +20,8 @@ const Tooltip = (props: {
   backgroundColor: string
   text: string
   score: number
-  onYes: () => Promise<void>
-  onNo: () => Promise<void>
+  labels: string[]
+  onLabel: (label: string) => Promise<void>
   start: number
   end: number
 }) => {
@@ -36,12 +37,13 @@ const Tooltip = (props: {
   })
   const hover = useHover(context, { move: false, handleClose: safePolygon() })
   const focus = useFocus(context)
+  const click = useClick(context, { enabled: false })
   const dismiss = useDismiss(context)
   const role = useRole(context, {
     role: "dialog",
   })
   const clientPoint = useClientPoint(context, { axis: "x", enabled: !isOpen })
-  const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, dismiss, role, clientPoint])
+  const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, dismiss, role, clientPoint, click])
   return (
     <>
       <Text
@@ -75,25 +77,19 @@ const Tooltip = (props: {
           <Text as="p">Are the two texts consistent?</Text>
           <br />
           <div>
-            <Button
-              id="yesButton"
-              onClick={event => {
-                event.stopPropagation()
-                props.onYes().then(() => setOpen(false))
-              }}
-              style={{ marginRight: ".5rem" }}
-            >
-              Yes
-            </Button>
-            <Button
-              id="noButton"
-              onClick={event => {
-                event.stopPropagation()
-                props.onNo().then(() => setOpen(false))
-              }}
-            >
-              No
-            </Button>
+            {props.labels.map((label, index) => (
+              <Button
+                id={`label-${label}-${index}-${props.start}`}
+                key={props.start + label}
+                onMouseDown={(event) => {
+                  event.stopPropagation()
+                  event.preventDefault()
+                  props.onLabel(label).then(() => setOpen(false))
+                }}
+              >
+                {label}
+              </Button>
+            ))}
           </div>
         </div>
       )}

@@ -26,7 +26,8 @@ import {
   getSingleTask,
   labelText,
   selectText,
-  deleteRecord
+  deleteRecord,
+  getAllLabels
 } from "../utils/request"
 import { type LabelData, type SectionResponse, type Task, userSectionResponse } from "../utils/types"
 import {
@@ -87,6 +88,7 @@ export default function Index() {
   const [stage, setStage] = useState<Stage>(Stage.None)
   const [history, setHistory] = useState<LabelData[]>(null)
   const [viewingRecord, setViewingRecord] = useState<LabelData | null>(null)
+  const [labels, setLabels] = useState<string[]>([])
 
   const historyColumns = [
     { columnKey: "summary", label: "Summary" },
@@ -97,8 +99,9 @@ export default function Index() {
 
   useEffect(() => {
     if (getLock.current) return
-    getAllTasksLength().then(tasks => {
+    Promise.all([getAllTasksLength(), getAllLabels()]).then(([tasks, labels]) => {
       setMaxIndex(tasks.all)
+      setLabels(labels)
       getLock.current = true
     })
   }, [])
@@ -272,25 +275,17 @@ export default function Index() {
               backgroundColor={color}
               text={props.text.slice(slice[0], slice[1] + 1)}
               score={score}
-              onYes={async () => {
-                if (firstRange === null || rangeId === null) return Promise.resolve()
+              labels={labels}
+              onLabel={async (label) => {
+                if (firstRange === null || rangeId === null) {
+                  return Promise.resolve()
+                }
                 await labelText(labelIndex, {
                   source_start: rangeId === "summary" ? slice[0] : firstRange[0],
                   source_end: rangeId === "summary" ? slice[1] + 1 : firstRange[1],
                   summary_start: rangeId === "summary" ? firstRange[0] : slice[0],
                   summary_end: rangeId === "summary" ? firstRange[1] : slice[1] + 1,
-                  consistent: true,
-                })
-                updateHistory()
-              }}
-              onNo={async () => {
-                if (firstRange === null || rangeId === null) return Promise.resolve()
-                await labelText(labelIndex, {
-                  source_start: rangeId === "summary" ? slice[0] : firstRange[0],
-                  source_end: rangeId === "summary" ? slice[1] + 1 : firstRange[1],
-                  summary_start: rangeId === "summary" ? firstRange[0] : slice[0],
-                  summary_end: rangeId === "summary" ? firstRange[1] : slice[1] + 1,
-                  consistent: false,
+                  consistent: label
                 })
                 updateHistory()
               }}
@@ -522,7 +517,7 @@ export default function Index() {
                         <TableRow key={record.record_id}>
                           <TableCell>{currentTask.sum.slice(record.summary_start, record.summary_end)}</TableCell>
                           <TableCell>{currentTask.doc.slice(record.source_start, record.source_end)}</TableCell>
-                          <TableCell>{record.consistent ? "Yes" : "No"}</TableCell>
+                          <TableCell>{record.consistent}</TableCell>
                           <TableCell>
                             {
                               viewingRecord != null && viewingRecord.record_id === record.record_id ?

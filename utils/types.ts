@@ -12,7 +12,7 @@ export type LabelRequest = {
   summary_end: number
   source_start: number
   source_end: number
-  consistent: boolean
+  consistent: string
 }
 
 export type SelectionRequest = {
@@ -54,7 +54,7 @@ export type LabelData = {
   summary_end: number
   source_start: number
   source_end: number
-  consistent: boolean
+  consistent: string
   task_index: number
   user_id: string
 }

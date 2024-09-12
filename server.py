@@ -97,7 +97,7 @@ class Label(BaseModel):
     summary_end: int
     source_start: int
     source_end: int
-    consistent: bool
+    consistent: str
 
 class Selection(BaseModel):
     start: int
@@ -165,12 +165,11 @@ async def post_task(task_index: int, label: Label, user_key: Annotated[str, Head
         annot_spans["source"] = (label.source_start, label.source_end)
     
     annotator = user_key
-    label_ = "consistent" if label.consistent else "inconsistent"
     
     database.push_annotation({
         "sample_id": sample_id,
         "annotator": annotator,
-        "label": label_,
+        "label": label.consistent,
         "annot_spans": annot_spans
     }) # the label_data is in databse.OldLabelData format
     return {"message": "success"}

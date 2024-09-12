@@ -75,15 +75,15 @@ const updateSliceArray = (text: string, slices: SectionResponse): [number, numbe
 type HistorySlice = {
   text: string
   labeled: boolean
-  isConsistent: boolean
+  consistent: string
 }
 
-const historyTextToSlice = (text: string, start: number, end: number, consistent: boolean): HistorySlice[] => {
+const historyTextToSlice = (text: string, start: number, end: number, consistent: string): HistorySlice[] => {
   const range = [start, end]
   const part: HistorySlice[] = []
 
   if (start === end) {
-    return [{ text: text, labeled: false, isConsistent: consistent }]
+    return [{ text, labeled: false, consistent }]
   }
 
   const labeledPart = text.slice(range[0], range[1])
@@ -91,13 +91,13 @@ const historyTextToSlice = (text: string, start: number, end: number, consistent
   const unlabeledPartEnd = text.slice(range[1])
 
   if (unlabeledPartStart.length > 0) {
-    part.push({ text: unlabeledPartStart, labeled: false, isConsistent: consistent })
+    part.push({ text: unlabeledPartStart, labeled: false, consistent })
   }
 
-  part.push({ text: labeledPart, labeled: true, isConsistent: consistent })
+  part.push({ text: labeledPart, labeled: true, consistent })
 
   if (unlabeledPartEnd.length > 0) {
-    part.push({ text: unlabeledPartEnd, labeled: false, isConsistent: consistent })
+    part.push({ text: unlabeledPartEnd, labeled: false, consistent })
   }
 
   return part

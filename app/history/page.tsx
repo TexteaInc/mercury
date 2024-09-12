@@ -115,7 +115,7 @@ export default function Page() {
                       {doc.map((part, index) => (
                         <span
                           key={`doc-${part.labeled}-${index}`}
-                          style={{ background: part.labeled ? (part.isConsistent ? "#00a6ff" : "#fecdd3") : "none" }}
+                          style={{ background: part.labeled ? "#00a6ff" : "none" }}
                         >
                           {part.text}
                         </span>
@@ -148,7 +148,7 @@ export default function Page() {
                       {summary.map((part, index) => (
                         <span
                           key={`summary-${part.labeled}-${index}`}
-                          style={{ background: part.labeled ? (part.isConsistent ? "#00a6ff" : "#fecdd3") : "none" }}
+                          style={{ background: part.labeled ? "#00a6ff" : "none" }}
                         >
                           {part.text}
                         </span>

@@ -13,6 +13,12 @@ const getKey = async (): Promise<string> => {
   return Promise.resolve(key)
 }
 
+const getAllLabels = async (): Promise<string[]> => {
+    const response = await fetch(`${backend}/candidate_labels`);
+    const data = await response.json();
+    return data as string[];
+}
+
 const getAllTasksLength = async (): Promise<AllTasksLength> => {
     const response = await fetch(`${backend}/task`);
     const data = await response.json();
@@ -85,4 +91,4 @@ const deleteRecord = async (recordId: string): Promise<Normal> => {
     return data as Normal;
 }
 
-export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, getTaskHistory, deleteRecord }
+export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, getTaskHistory, deleteRecord, getAllLabels }
