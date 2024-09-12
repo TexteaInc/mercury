@@ -81,7 +81,8 @@ Each row is a chunk.
 A JSONL file like this:
 
 ```
-{"source": "The quick brown fox. Jumps over the lazy dog. ", "summary": "26 letters."}
+# test.jsonl
+{"source": "The quick brown fox. Jumps over a lazy dog. ", "summary": "26 letters."}
 {"source": "We the people. Of the U.S.A. ", "summary": "The U.S. Constitution. It is great. "}
 ```
 
@@ -90,14 +91,15 @@ will be ingested into the `chunks` table as below:
 | chunk_id | text                       | text_type | sample_id | char_offset | chunk_offset|
 |----------|----------------------------|-----------|-----------|-------------|-------------|
 | 1        | "The quick brown fox."     | source    | 1         | 0           | 0           |
-| 2        | "Jumps over the lazy dog." | source    | 1         | 20          | 1           |
-| 3        | "26 letters."              | summary   | 1         | 0           | 0           |
-| 4        | "We the people."           | source    | 2         | 0           | 0           |
-| 5        | "Of the U.S.A."            | source    | 2         | 14          | 1           |
+| 2        | "Jumps over the lazy dog." | source    | 1         | 21          | 1           |
+| 3        | "We the people."           | source    | 2         | 0           | 0           |
+| 4        | "Of the U.S.A."            | source    | 2         | 15          | 1           |
+| 5        | "26 letters."              | summary   | 1         | 0           | 0           |
 | 6        | "The U.S. Constitution."   | summary   | 2         | 0           | 0           |
+| 7        | "It is great."             | summary   | 2         | 23          | 1           |
 
 Meaning of select columns: 
-* [OBSOLETE] `char_offset_local` is the offset of a chunk in its parent document measured by the starting character of the chunk. It allows us to find the chunk in the document. 
+* `char_offset_local` is the offset of a chunk in its parent document measured by the starting character of the chunk. It allows us to find the chunk in the document. 
 * `chunk_offset_local` is the index of a chunk in its parent document. It is used to find the chunk in the document.
 * `text_type` is takes value from the ingestion file. `source` and `summary` for now.
 * 1-indexed columns: `chunk_id` and `sample_id`. 

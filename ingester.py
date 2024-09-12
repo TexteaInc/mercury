@@ -33,6 +33,9 @@ class Embedder:
             from sentence_transformers import SentenceTransformer
             self.model = SentenceTransformer(f'sentence-transformers/{name}')
             self.use_sentence_transformers = True
+        else: 
+            print (f"Unsupported embedder {name}. Please check. ")
+            exit() 
     
     def embed(self, texts: List[str], embedding_dimension: int= 512,  batch_size:int = 12) -> np.ndarray:
         """The function that takes a list of strings and returns a numpy array of their embeddings.
@@ -47,6 +50,7 @@ class Embedder:
             return np.array([item.embedding for item in response.data])
         else:
             # return dummy embeddings
+            print (f"Returning dummy embeddings")
             return np.random.rand(len(texts), embedding_dimension)
 
 class Chunker: 
@@ -65,7 +69,7 @@ class Ingester:
         file_to_ingest: str,
         overwrite_data: bool = False,
         embedding_dimension: int = 512,
-        embedding_model_id: Literal["bge-m3", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "sbert/multi-qa-mpnet-base-dot-v1", "dummy"] = "dummy",
+        embedding_model_id: Literal["bge-m3", "bge-small-en-v1.5", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "multi-qa-mpnet-base-dot-v1", "dummy"] = "dummy",
         sqlite_db_path: str = "./mercury.sqlite",
         ingest_column_1: str = "source",
         ingest_column_2: str = "summary",
@@ -74,6 +78,8 @@ class Ingester:
         self.overwrite_data = overwrite_data
         self.sqlite_db_path = sqlite_db_path
         self.embedding_dimension = embedding_dimension
+        if embedding_model_id == "bge-small-en-v1.5":
+            self.embedding_dimension = 384
         self.embedding_model_id = embedding_model_id
 
         self.ingest_column_1 = ingest_column_1
@@ -138,12 +144,13 @@ class Ingester:
 
         global_chunk_id = 1 # the id of the chunk in tables, starting from 1
         for text_type, docs in self.text.items():
-            for sample_id in range(0, len(docs)): # simple, just chunk and embed one doc each time
+            print (f"Processing {text_type}")
+            for sample_id in tqdm(range(0, len(docs)), desc="Sample"): # simple, just chunk and embed one doc each time
                 char_offset = 0
                 chunks = self.chunker.chunk(docs[sample_id])
                 embeddings = self.embedder.embed(chunks, embedding_dimension=self.embedding_dimension)
                 for chunk_offset, chunk_text in enumerate(chunks):
-                    print ([global_chunk_id, chunk_text, text_type, sample_id+1, char_offset, chunk_offset])
+                    # print ([global_chunk_id, chunk_text, text_type, sample_id+1, char_offset, chunk_offset])
                     self.db.execute(
                         "INSERT INTO chunks (chunk_id, text, text_type, sample_id, char_offset, chunk_offset) VALUES (?, ?, ?, ?, ?, ?)",
                         [global_chunk_id, chunk_text, text_type, sample_id+1, char_offset, chunk_offset]
@@ -185,7 +192,7 @@ if __name__ == "__main__":
         "--embedding_model_id",
         type=str,
         default="dummy",
-        help="The ID of the embedding model to usej. Currently supports 'multi-qa-mpnet-base-dot-v1', 'BAAI/bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}', and 'dummy'.",
+        help="The ID of the embedding model to usej. Currently supports 'multi-qa-mpnet-base-dot-v1', 'bge-m3',  'bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}', and 'dummy'.",
     )
     parser.add_argument(
         "--embedding_dimension",

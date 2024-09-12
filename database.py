@@ -49,7 +49,7 @@ def convert_LabelData(lb: LabelData | OldLabelData, direction: Literal["new2old"
         return {
             "record_id": lb["annot_id"],
             # "sample_id": f"mercury_{lb['sample_id']}",
-            "sample_id": f"mercury_{lb["sample_id"]}",
+            "sample_id": f"mercury_{lb['sample_id']}",
             "summary_start": lb["annot_spans"]["summary"][0],
             "summary_end": lb["annot_spans"]["summary"][1],
             "source_start": lb["annot_spans"].get("source", (-1, -1))[0],

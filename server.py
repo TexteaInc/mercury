@@ -13,7 +13,7 @@ from typing import List
 
 load_dotenv()
 
-from better_vectara import BetterVectara as Vectara
+# from better_vectara import BetterVectara as Vectara
 from database import Database, LabelData
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
@@ -203,26 +203,40 @@ async def post_selections(task_index: int, selection: Selection):
     embedding = embedder.embed([query], embedding_dimension=configs["embedding_dimension"])[0]
     
     # Then get the chunk_id's from the opposite document
-    sql_cmd = "SELECT chunk_id FROM chunks WHERE text_type = ? AND sample_id = ?"
+    sql_cmd = "SELECT chunk_id, text FROM chunks WHERE text_type = ? AND sample_id = ?"
     if selection.from_summary:
         text_type = "source"
     else:
         text_type = "summary"
 
-    chunk_ids_of_oppsoite_doc = database.db.execute(sql_cmd, [text_type, task_index + 1]).fetchall()
+    chunk_id_and_text = database.db.execute(sql_cmd, [text_type, task_index + 1]).fetchall()
+    search_chunk_ids = [str(row[0]) for row in chunk_id_and_text]
+
+    if len(search_chunk_ids) == 1: # no need for vector search
+        selections = [{
+            "score": 1.0,
+            "offset": 0,
+            "len": len(chunk_id_and_text[0][1]),
+            "to_doc": selection.from_summary,
+        }]
+        return selections
 
     # Do vector search on the `embeddings` table when rowid is in chunk_ids
+    # print ("Search for row ids: ", search_chunk_ids)
+    # print ("Embedding: ", embedding)    
     sql_cmd = " \
         SELECT  \
             rowid, \
             distance \
-        FROM embeddings \
-        WHERE rowid IN ({0})  \
-        AND embedding MATCH ?  \
+        FROM embeddings "  \
+        " WHERE rowid IN ({0})" \
+        "AND embedding MATCH '{1}'  \
         ORDER BY distance \
-        LIMIT 5;".format(', '.join('?' for _ in chunk_ids_of_oppsoite_doc))
-    search_chunk_ids = [row[0] for row in chunk_ids_of_oppsoite_doc]
-    vector_search_result = database.db.execute(sql_cmd, [*search_chunk_ids, serialize_f32(embedding)]).fetchall()
+        LIMIT 5;".format(', '.join(search_chunk_ids), embedding)
+    # print ("SQL_CMD", sql_cmd)
+    
+    # vector_search_result = database.db.execute(sql_cmd, [*search_chunk_ids, serialize_f32(embedding)]).fetchall()
+    vector_search_result = database.db.execute(sql_cmd).fetchall()
     # [(2, 0.20000001788139343), (1, 0.40000003576278687)]
     # turn this into a dict from chunk__id to distance/score
     chunk_id_to_score = {row[0]: row[1] for row in vector_search_result}
