@@ -31,7 +31,6 @@ import {
 } from "../utils/request"
 import { type LabelData, type SectionResponse, type Task, userSectionResponse } from "../utils/types"
 import {
-  AddRegular,
   ArrowExportRegular,
   ArrowSyncRegular,
   ChevronLeftRegular,
@@ -408,7 +407,7 @@ export default function Index() {
         <Link href="/history/" rel="noopener noreferrer" target="_blank">
           <Button icon={<HistoryRegular />}>History</Button>
         </Link>
-        <Button
+        {/* <Button
           icon={<AddRegular />}
           onClick={() => {
             washHand()
@@ -431,7 +430,7 @@ export default function Index() {
           disabled={JSON.stringify(firstRange) === "[-1,-1]" && rangeId === "summary"}
         >
           Select Empty Summary
-        </Button>
+        </Button> */}
       </div>
       <br />
       <div
