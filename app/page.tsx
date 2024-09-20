@@ -585,10 +585,13 @@ export default function Index() {
                         <TableHeader>
                           <TableRow>
                             <TableHeaderCell key="summary">Summary</TableHeaderCell>
+                            {/* @ts-ignore */}
                             <ColumnResize id={1} className="columnResizer" />
                             <TableHeaderCell key="source">Source</TableHeaderCell>
+                            {/* @ts-ignore */}
                             <ColumnResize id={2} className="columnResizer" />
                             <TableHeaderCell key="consistent">Consistent</TableHeaderCell>
+                            {/* @ts-ignore */}
                             <ColumnResize id={3} className="columnResizer" />
                             <TableHeaderCell key="actions">Actions</TableHeaderCell>
                           </TableRow>
