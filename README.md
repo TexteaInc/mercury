@@ -9,8 +9,6 @@ Therefore, Mercury is very efficient for the labeling of NLP tasks that involve 
 
 Currently, Mercury only supports labeling inconsistencies between the source and summary for summarization in RAG.
 
-Mercury is powered by Vectara's semantic search engine -- which is among the best in the industry, and all your data, including human-generated annotations are securely stored in Vectara's bullet-proof data infrastructure.
-
 ![Header](.github/header.png)
 
 ## Dependencies
@@ -62,6 +60,33 @@ Mercury uses [`sqlite-vec`](https://github.com/asg017/sqlite-vec) to store and s
 3. `python3 server.py`. Be sure to set the candidate labels to choose from in the `server.py` file.
 
 The annotations are stored in the `annotations` table in a SQLite database (hardcoded name `mercury.sqlite`). See the section [`annotations` table](#annotations-table-the-human-annotations) for the schema.
+
+The dumped human annotations are stored in a JSON format like this:
+
+```python
+[
+    {# first sample 
+        'source': str, 
+        'summary': str,
+        'annotations': [ # a list of annotations from many human annotators
+            {
+                'source': {
+                    'text': str,  # text span
+                    'start': int, # charater offset
+                    'end': int,   # character offset
+                },
+                'summary': {
+                    'text': str,
+                    'start': int,
+                    'end': int
+                },
+                'label': str,
+                'annotator': str
+            }
+        ]
+    }
+]
+```
 
 ## Technical details
 
@@ -189,48 +214,3 @@ Here is a running example (using the data [above](#chunks-table-chunks-and-metad
 ### Embedding speed and/or embedding dimension
 1. `multi-qa-mpnet-base-dot-v1` takes about 0.219 second on a x86 CPU to embed one sentence when batch_size is 1. The embedding dimension is 768. 
 2. `BAAI/bge-small-en-v1.5` takes also about 0.202 second on a x86 CPU to embed one sentence when batch_size is 1. The embedding dimension is 384.
-
-
-## Technical details (outdated, using Vectara)
-
-For each dataset for labeling, Mercury uses three Vectara corpora:
-
-1. Source
-2. Summary
-3. Annotation -- no text data. metadata is used to store the human annotations.
-
-In summarization, a summary corresponds to a source. The source corpus is the opposite of the summary corpus. And vice versa.
-The three parts of a sample can be associated across the three corpora by a metedata field called `id`.
-
-A source or a summary is a document in its corresponding corpus. Each sentence is a chunk in the document. Thus, each sentence is embedded into a vector.
-
-For each sample, Mercury displays the source and the summary side by side. The user can select a text span from the source and the summary and label the inconsistency between them.
-
-When a text span is selected, Mercury uses Vectara's search engine to find semantically related text spans in the opposite corpus, e.g., selecting text in summary and searching in source. The related text spans are highlighted.
-
-The dumped human annotations are stored in a JSON format like this:
-
-```python
-[
-    {# first sample 
-        'source': str, 
-        'summary': str,
-        'annotations': [ # a list of annotations from many human annotators
-            {
-                'source': {
-                    'text': str,
-                    'start': int,
-                    'end': int,
-                },
-                'summary': {
-                    'text': str,
-                    'start': int,
-                    'end': int
-                },
-                'label': str,
-                'annotator': str
-            }
-        ]
-    }
-]
-```

@@ -466,24 +466,34 @@ class Database:
 
         # match annotations with chunks by doc_id
         results = []
+        results_dict = {} # keys are sample_id, values are source text, summary text, and each pair of spans and labels and annotators
         for annot_id, sample_id, annot_spans, annotator, label in annotations:
             # find the source and summary text by doc_id
             full_texts = {}
             for text_type in ["source", "summary"]:
                 sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
                 res = self.db.execute(sql_cmd, (sample_id, text_type))
-                text = res.fetchall()
+                text = res.fetchall() # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
+                text = [t[0] for t in text]
                 full_texts[text_type] = " ".join(text)
             
             result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": label}
+            # annot_spans example: {'source': (1, 10), 'summary': (7, 10)}
             annot_spans = json.loads(annot_spans)
             for text_type, (start, end) in annot_spans.items():
                 result_local[f"{text_type}_span"] = full_texts[text_type][start:end]
+                result_local[f"{text_type}_start"] = start
+                result_local[f"{text_type}_end"] = end
 
             results.append(result_local)
 
+            results_dict.setdefault(sample_id, {"source": full_texts["source"], "summary": full_texts["summary"], "annotations": []})
+            results_dict[sample_id]["annotations"].append(result_local)
+
+        results_nested = [{"sample_id": key, **value} for key, value in results_dict.items()]
+
         with open(dump_file, "w") as f:
-            json.dump(results, f, indent=4, ensure_ascii=False)
+            json.dump(results_nested, f, indent=2, ensure_ascii=False)
             #TODO add JSONL support. Automatically detect file format based on filename extension
 
 
