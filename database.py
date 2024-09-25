@@ -30,7 +30,7 @@ class LabelData(TypedDict):  # human annotation on a sample
     sample_id: int 
     annot_spans: AnnotSpan
     annotator: str
-    label: str
+    label: str  # json string
 
 def convert_LabelData(lb: LabelData | OldLabelData, direction: Literal["new2old", "old2new"] ) -> LabelData | OldLabelData: 
     if direction == "old2new":
@@ -337,7 +337,7 @@ class Database:
                 "sample_id": sample_id, 
                 "annot_spans": annot_spans,
                 "annotator": annotator,
-                "label": label
+                "label": json.loads(label)
             }, "new2old"))
         return label_data
 
@@ -359,7 +359,7 @@ class Database:
                 "sample_id": sample_id, 
                 "annot_spans": annot_spans,
                 "annotator": annotator,
-                "label": label
+                "label": json.loads(label)
             }, "new2old"))
         return label_data
 
@@ -477,7 +477,7 @@ class Database:
                 text = [t[0] for t in text]
                 full_texts[text_type] = " ".join(text)
             
-            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": label}
+            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": json.loads(label)}
             # annot_spans example: {'source': (1, 10), 'summary': (7, 10)}
             annot_spans = json.loads(annot_spans)
             for text_type, (start, end) in annot_spans.items():

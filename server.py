@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import uuid
@@ -97,7 +98,7 @@ class Label(BaseModel):
     summary_end: int
     source_start: int
     source_end: int
-    consistent: str
+    consistent: list[str]
 
 class Selection(BaseModel):
     start: int
@@ -166,10 +167,12 @@ async def post_task(task_index: int, label: Label, user_key: Annotated[str, Head
     
     annotator = user_key
     
+    label_string = json.dumps(label.consistent)
+    
     database.push_annotation({
         "sample_id": sample_id,
         "annotator": annotator,
-        "label": label.consistent,
+        "label": label_string,
         "annot_spans": annot_spans
     }) # the label_data is in databse.OldLabelData format
     return {"message": "success"}

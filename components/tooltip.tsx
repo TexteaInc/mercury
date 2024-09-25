@@ -13,7 +13,7 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react"
-import { Button, Text, Title3 } from "@fluentui/react-components"
+import { Button, Checkbox, Text, Title3 } from "@fluentui/react-components"
 import { useState } from "react"
 
 const Tooltip = (props: {
@@ -21,12 +21,13 @@ const Tooltip = (props: {
   text: string
   score: number
   labels: string[]
-  onLabel: (label: string) => Promise<void>
+  onLabel: (label: string[]) => Promise<void>
   start: number
   end: number
   message: string
 }) => {
   const [isOpen, setOpen] = useState(false)
+  const [labelsStates, setLabelsStates] = useState({})
   const { refs, floatingStyles, context } = useFloating({
     open: isOpen,
     onOpenChange: setOpen,
@@ -82,20 +83,36 @@ const Tooltip = (props: {
             gap: "1rem",
             flexWrap: "wrap",
           }}>
-            {props.labels.map((label, index) => (
-              <Button
-                id={`label-${label}-${index}-${props.start}`}
-                key={props.start + label}
-                onMouseDown={(event) => {
-                  event.stopPropagation()
-                  event.preventDefault()
-                  props.onLabel(label).then(() => setOpen(false))
-                }}
-              >
-                {label}
-              </Button>
-            ))}
+            {
+              props.labels.map((label, index) => (
+                <Checkbox
+                  id={`label-${label}-${index}-${props.start}`}
+                  label={label}
+                  checked={labelsStates[label]}
+                  onMouseDown={(event) => {
+                    event.stopPropagation()
+                    event.preventDefault()
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    event.preventDefault()
+                  }}
+                  onChange={(event) => {
+                    setLabelsStates({ ...labelsStates, [label]: event.target.checked })
+                  }}
+                />
+              ))
+            }
           </div>
+          <Button
+              onMouseDown={(event) => {
+                event.stopPropagation()
+                event.preventDefault()
+                props.onLabel(Object.keys(labelsStates).filter((label) => labelsStates[label])).then(() => setOpen(false))
+              }}
+          >
+            Submit
+          </Button>
         </div>
       )}
     </>

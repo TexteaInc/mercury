@@ -80,7 +80,7 @@ The dumped human annotations are stored in a JSON format like this:
                     'start': int,
                     'end': int
                 },
-                'label': str,
+                'label': list[str],
                 'annotator': str
             }
         ]
@@ -143,8 +143,8 @@ Meaning of select columns:
 
 | annot_id | sample _id | annot_spans                              |  annotator | label      |
 |----------|------------|-----------------------------------------|-----------|------------|
-| 1        | 1          | {'source': (1, 10), 'summary': (7, 10)} | Alice     | ambivalent |
-| 2        | 1          | {'summary': (2, 8)}                     | Bob       | extrinsic  |
+| 1        | 1          | {'source': (1, 10), 'summary': (7, 10)} | Alice     | ["ambivalent"] |
+| 2        | 1          | {'summary': (2, 8)}                     | Bob       | ["extrinsic"]  |
 
 * `src_chunk_id` and `summ_chunk_id` are the `id`'s of chunks in the `corpus` table.
 * `text_spans` is a JSON text field that stores the text spans selected by the annotator. Each entry is a dictionary where keys must be those in the `text_type` column in the `chunks` table (hardcoded to  `source` and `summary` now) and the values are lists of two integers: the start and end indices of the text span in the chunk. For extrinsic hallucinations (no connection to the source at all), only `summary`-key items. The reason we use JSON here is that SQLite does not support array types.

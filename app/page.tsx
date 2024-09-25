@@ -161,6 +161,11 @@ export default function Index() {
     const func = (event) => {
       const selection = window.getSelection()
       const target = event.target as HTMLElement
+      
+      if (target.id.startsWith("label-")) {
+        return
+      }
+      
       if (
         !selection.containsNode(document.getElementById("summary"), true) &&
         !selection.containsNode(document.getElementById("doc"), true)
@@ -608,7 +613,7 @@ export default function Index() {
                                 <TableCell className="column_resizer_body" />
                                 <TableCell>{currentTask.doc.slice(record.source_start, record.source_end)}</TableCell>
                                 <TableCell className="column_resizer_body" />
-                                <TableCell>{record.consistent}</TableCell>
+                                <TableCell>{record.consistent.join(", ")}</TableCell>
                                 <TableCell className="column_resizer_body" />
                                 <TableCell>
                                   {viewingRecord != null && viewingRecord.record_id === record.record_id ? (

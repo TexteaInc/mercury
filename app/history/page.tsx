@@ -199,7 +199,7 @@ export default function Page() {
               <br />
               <strong>Source:</strong> {label.source_start} - {label.source_end}
               <br />
-              <strong>Consistent:</strong> {label.consistent ? "Yes" : "No"}
+              <strong>Consistent:</strong> {label.consistent.join(", ")}
             </Text>
             <CardFooter>
               <Button

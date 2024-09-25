@@ -75,10 +75,10 @@ const updateSliceArray = (text: string, slices: SectionResponse): [number, numbe
 type HistorySlice = {
   text: string
   labeled: boolean
-  consistent: string
+  consistent: string[]
 }
 
-const historyTextToSlice = (text: string, start: number, end: number, consistent: string): HistorySlice[] => {
+const historyTextToSlice = (text: string, start: number, end: number, consistent: string[]): HistorySlice[] => {
   const range = [start, end]
   const part: HistorySlice[] = []
 
