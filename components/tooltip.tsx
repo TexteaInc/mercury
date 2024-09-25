@@ -13,7 +13,7 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react"
-import { Button, Checkbox, Text, Title3 } from "@fluentui/react-components"
+import { Button, Text, Title3, ToggleButton } from "@fluentui/react-components"
 import { useState } from "react"
 
 const Tooltip = (props: {
@@ -80,30 +80,28 @@ const Tooltip = (props: {
           <br />
           <div style={{
             display: "flex",
+            marginTop: "1rem",
             gap: "1rem",
             flexWrap: "wrap",
           }}>
             {
               props.labels.map((label, index) => (
-                <Checkbox
+                <ToggleButton
                   id={`label-${label}-${index}-${props.start}`}
-                  label={label}
                   checked={labelsStates[label]}
-                  onMouseDown={(event) => {
-                    event.stopPropagation()
-                    event.preventDefault()
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    event.preventDefault()
-                  }}
                   onChange={(event) => {
+                    event.stopPropagation()
+                    event.preventDefault()
+                    console.log(event)
                     setLabelsStates({ ...labelsStates, [label]: event.target.checked })
                   }}
-                />
+                >
+                  {label}
+                </ToggleButton>
               ))
             }
           </div>
+          <br />
           <Button
               onMouseDown={(event) => {
                 event.stopPropagation()
