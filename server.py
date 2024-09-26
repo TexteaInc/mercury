@@ -19,6 +19,7 @@ from database import Database, LabelData
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse
 
+import yaml
 import sqlite3
 import sqlite_vec
 from ingester import Embedder
@@ -106,8 +107,10 @@ class Selection(BaseModel):
     from_summary: bool
 
 @app.get("/candidate_labels") 
-async def get_labels() -> List[str]: # get all candidate labels for human annotators to choose from
-    return ["consistent", "inconsistent", "not sure"]
+async def get_labels() -> list: # get all candidate labels for human annotators to choose from
+    with open("labels.yaml") as f:
+        labels = yaml.safe_load(f)
+    return labels
 
 @app.get("/user/new") # please update the route name to be more meaningful, e.g., /user/new_user
 async def create_new_user():

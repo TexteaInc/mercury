@@ -13,7 +13,7 @@ const getKey = async (): Promise<string> => {
   return Promise.resolve(key)
 }
 
-const getAllLabels = async (): Promise<string[]> => {
+const getAllLabels = async (): Promise<(string | object)[]> => {
     const response = await fetch(`${backend}/candidate_labels`);
     const data = await response.json();
     return data as string[];

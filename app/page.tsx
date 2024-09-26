@@ -102,7 +102,7 @@ export default function Index() {
   const [stage, setStage] = useState<Stage>(Stage.None)
   const [history, setHistory] = useState<LabelData[]>(null)
   const [viewingRecord, setViewingRecord] = useState<LabelData | null>(null)
-  const [labels, setLabels] = useState<string[]>([])
+  const [labels, setLabels] = useState<(string | object)[]>([])
 
   const historyColumns = [
     { columnKey: "summary", label: "Summary" },
