@@ -64,6 +64,7 @@ const normalizationColor = (score: number[]) => {
   }
   return normalScores
 }
+
 const colors = [
   "#c4ebff",
   "#a8e1ff",
@@ -75,6 +76,29 @@ const colors = [
 const getColor = (score: number) => {
   return colors[Math.floor(score * (colors.length - 1))]
 }
+
+
+// Function to determine if a color is light or dark
+const isLightColor = (color: string) => {
+  // Remove the hash if present
+  color = color.replace('#', '');
+
+  // Convert 3-digit hex to 6-digit hex
+  if (color.length === 3) {
+    color = color.split('').map(char => char + char).join('');
+  }
+
+  // Convert hex to RGB
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
+
+  // Calculate luminance
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+  // Return true if luminance is greater than 128 (light color)
+  return luminance > 200;
+};
 
 const exportJSON = () => {
   exportLabel().then(data => {
@@ -269,6 +293,7 @@ export default function Index() {
           end={slice[1]}
           key={`slice-${slice[0]}-${slice[1]}`}
           backgroundColor="#79c5fb"
+          textColor="black"
           text={props.text.slice(slice[0], slice[1] + 1)}
           labels={labels}
           onLabel={async (label, note) => {
@@ -285,7 +310,7 @@ export default function Index() {
             })
             updateHistory()
           }}
-          message="Check all types that apply."
+          message="Check all types that apply below."
         />
       ) : (
         <Text
@@ -316,13 +341,16 @@ export default function Index() {
         {sliceArray.map(slice => {
           const isBackendSlice = slice[2]
           const score = slice[3]
-          const color = isBackendSlice ? score === 2 ? "#85e834" : getColor(normalColor[slice[4]]) : "#ffffff"
+          const bg_color = isBackendSlice ? score === 2 ? "#85e834" : getColor(normalColor[slice[4]]) : "#ffffff"
+          const textColor = isLightColor(bg_color) ? 'black' : 'white'
+          // const textColor= 'red'
           return isBackendSlice && viewingRecord == null ? (
             <Tooltip
               start={slice[0]}
               end={slice[1]}
               key={`slice-${slice[0]}-${slice[1]}`}
-              backgroundColor={color}
+              backgroundColor={bg_color}
+              textColor={textColor}
               text={props.text.slice(slice[0], slice[1] + 1)}
               score={score}
               labels={labels}
@@ -345,7 +373,7 @@ export default function Index() {
             ) : (
             <Text
               as="span"
-              style={{ backgroundColor: color }}
+              style={{ backgroundColor: bg_color }}
               key={`slice-${slice[0]}-${slice[1]}`}
               data-mercury-label-start={slice[0]}
               data-mercury-label-end={slice[1]}

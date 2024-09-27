@@ -13,7 +13,7 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react"
-import { Button, Checkbox, Text, Textarea, Title3 } from "@fluentui/react-components"
+import { Button, Checkbox, Text, Textarea, Title3, Subtitle2 } from "@fluentui/react-components"
 import { useEffect, useState } from "react"
 
 
@@ -26,6 +26,7 @@ const mixedToBoolean = (checked: "mixed" | boolean): boolean => {
 
 const Tooltip = (props: {
   backgroundColor: string
+  textColor: string
   text: string
   score?: number
   labels: (string | object)[]
@@ -124,6 +125,7 @@ const Tooltip = (props: {
         as="span"
         style={{
           backgroundColor: props.backgroundColor,
+          color: props.textColor,
         }}
         ref={refs.setReference}
         {...getReferenceProps()}
@@ -147,10 +149,11 @@ const Tooltip = (props: {
           }}
           {...getFloatingProps()}
         >
-          {typeof props.score === "number" ? <Title3>Matchness: {props.score.toFixed(2)}</Title3> : <Title3>Hallucinated?</Title3>}
+          {typeof props.score === "number" ? <Subtitle2>This pair of spans is hallucinated. </Subtitle2> : <Subtitle2>A single span hallucinated against the whole source. </Subtitle2>}
+          {/* (Score: {props.score.toFixed(2)}) */}
           <br />
           <Text as="p">{props.message}</Text>
-          <br />
+          {/* <br /> */}
           <div style={{
             display: "flex",
             marginTop: "1rem",
@@ -198,13 +201,14 @@ const Tooltip = (props: {
               })
             }
           </div>
-          <br />
+          {/* <br /> */}
+          {/* <Text>Note (optional)</Text> */}
           <Textarea 
             resize="both"
             style={{
               width: "100%",
             }}
-            placeholder="Note"
+            placeholder="Add an optional note"
             value={note}
             onChange={(_, data) => setNote(data.value)}
           />

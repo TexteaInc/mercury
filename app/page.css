@@ -5,7 +5,8 @@
 }
 
 .columnResizer:hover {
-    border-right: 1px solid #ddd;
-    border-left: 1px solid #ddd;
-    background-color: #f9f9f9;
+    border-right: 1px solid #777;
+    border-left: 1px solid #777;
+    /* background-color: #f9f9f9; */
+    background-color: #777;
 }

@@ -266,7 +266,7 @@ async def post_selections(task_index: int, selection: Selection):
         text = i[1]
         selections.append(
             {
-                "score": score,
+                "score": 1 - score, # semantic similarity is 1 - distance
                 "offset": offset,
                 "len": len(text),
                 "to_doc": selection.from_summary,
