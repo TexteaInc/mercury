@@ -42,8 +42,8 @@ class Embedder:
         """
         if self.use_sentence_transformers:
             return self.model.encode(texts, batch_size=batch_size, normalize_embeddings=True)
-        elif self.name == 'bge-m3':
-            return self.model.encode(texts, batch_size=batch_size, max_length=512)['dense_vecs']
+        # elif self.name == 'bge-m3':
+        #     return self.model.encode(texts, batch_size=batch_size, max_length=512)['dense_vecs']
         elif "openai" in self.name:
             openai_model_id = self.name.split("/")[-1]
             response  = self.model.embeddings.create(input=texts, model=openai_model_id, dimensions=int(embedding_dimension))
@@ -69,7 +69,8 @@ class Ingester:
         file_to_ingest: str,
         overwrite_data: bool = False,
         embedding_dimension: int = 512,
-        embedding_model_id: Literal["bge-m3", "bge-small-en-v1.5", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "multi-qa-mpnet-base-dot-v1", "dummy"] = "dummy",
+        # embedding_model_id: Literal["bge-m3", "bge-small-en-v1.5", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "multi-qa-mpnet-base-dot-v1", "dummy"] = "dummy",
+        embedding_model_id: Literal["bge-small-en-v1.5", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "multi-qa-mpnet-base-dot-v1", "dummy"] = "dummy",
         sqlite_db_path: str = "./mercury.sqlite",
         ingest_column_1: str = "source",
         ingest_column_2: str = "summary",
@@ -180,7 +181,9 @@ if __name__ == "__main__":
             return int(env)
         return None
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Ingest data to be annotated into the SQLite database",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("file_to_ingest", type=str, help="Path to the file to ingest")
     parser.add_argument(
         "--overwrite_data",
@@ -192,13 +195,13 @@ if __name__ == "__main__":
         "--embedding_model_id",
         type=str,
         default="dummy",
-        help="The ID of the embedding model to usej. Currently supports 'multi-qa-mpnet-base-dot-v1', 'bge-m3',  'bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}', and 'dummy'.",
+        help="The ID of the embedding model to use. Currently supports 'multi-qa-mpnet-base-dot-v1',  'bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}', and 'dummy' (random numbers).",
     )
     parser.add_argument(
         "--embedding_dimension",
         type=int,
         default=512,
-        help="The dimension of the embeddings",
+        help="The dimension of the embeddings. Only effective to OpenAI embedders.",
     )
     parser.add_argument(
         "--sqlite_db_path",

@@ -22,7 +22,7 @@ Mercury uses [`sqlite-vec`](https://github.com/asg017/sqlite-vec) to store and s
 
 2. If you don't have `pnpm` installed: `npm install -g pnpm`, you may need sudo. 
 
-3. To use `sqlite-vec` via Python's built-in `sqlite3` module, you must have SQLite>3.41 (otherwise `LIMIT` or `k=?` will not work properly with `rowid IN (?)` for vector search) installed and set Python's built-in `sqlite3` module to use it. 
+3. To use `sqlite-vec` via Python's built-in `sqlite3` module, you must have SQLite>3.41 (otherwise `LIMIT` or `k=?` will not work properly with `rowid IN (?)` for vector search) installed and set Python's built-in `sqlite3` module to use it. Python's built-in `sqlite3` module uses its own binary library that is independent of the OS's SQLite. So upgrading the OS's SQLite will not affect Python's `sqlite3` module. You need to follow the steps below:
    * Download and compile SQLite>3.41.0 from source
         ```bash
         wget https://www.sqlite.org/2024/sqlite-autoconf-3460100.tar.gz
