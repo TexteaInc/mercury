@@ -122,7 +122,7 @@ async def create_new_user():
 async def export_user_data(user_key: Annotated[str, Header()]):
     if user_key.startswith('"') and user_key.endswith('"'):
         user_key = user_key[1:-1]
-    return database.export_user_data(user_key)
+    return database.dump_annotator_labels(user_key)
 
 
 @app.get("/task")

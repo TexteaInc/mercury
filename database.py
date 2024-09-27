@@ -53,8 +53,8 @@ def convert_LabelData(lb: LabelData | OldLabelData, direction: Literal["new2old"
             "record_id": lb["annot_id"],
             # "sample_id": f"mercury_{lb['sample_id']}",
             "sample_id": f"mercury_{lb['sample_id']}",
-            "summary_start": lb["annot_spans"]["summary"][0],
-            "summary_end": lb["annot_spans"]["summary"][1],
+            "summary_start": lb["annot_spans"].get("summary", (-1, -1))[0],
+            "summary_end": lb["annot_spans"].get("summary", (-1, -1))[1],
             "source_start": lb["annot_spans"].get("source", (-1, -1))[0],
             "source_end": lb["annot_spans"].get("source", (-1, -1))[1],
             "consistent": lb["label"],
@@ -373,6 +373,40 @@ class Database:
                 "note": note
             }, "new2old"))
         return label_data
+    
+    @database_lock()
+    def dump_annotator_labels(self, annotator: str):
+        sql_cmd = "SELECT * FROM annotations WHERE annotator = ?"
+        res = self.db.execute(sql_cmd, (annotator,))
+        annotations = res.fetchall()
+        results = []
+        results_dict = {}
+        for annot_id, sample_id, annot_spans, annotator, label, note in annotations:
+            # find the source and summary text by doc_id
+            full_texts = {}
+            for text_type in ["source", "summary"]:
+                sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
+                res = self.db.execute(sql_cmd, (sample_id, text_type))
+                text = res.fetchall() # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
+                text = [t[0] for t in text]
+                full_texts[text_type] = " ".join(text)
+            
+            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": json.loads(label), "note": note}
+            # annot_spans example: {'source': (1, 10), 'summary': (7, 10)}
+            annot_spans = json.loads(annot_spans)
+            for text_type, (start, end) in annot_spans.items():
+                # print(full_texts)
+                result_local[f"{text_type}_span"] = full_texts[text_type][start:end]
+                result_local[f"{text_type}_start"] = start
+                result_local[f"{text_type}_end"] = end
+
+            results.append(result_local)
+
+            results_dict.setdefault(sample_id, {"source": full_texts["source"], "summary": full_texts["summary"], "annotations": []})
+            results_dict[sample_id]["annotations"].append(result_local)
+
+        results_nested = [{"sample_id": key, **value} for key, value in results_dict.items()]
+        return results_nested
 
     @database_lock()
     # def dump_all_data(

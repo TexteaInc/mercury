@@ -3,3 +3,9 @@
     display: block;
     width: var(--column_resize_before_width);
 }
+
+.columnResizer:hover {
+    border-right: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    background-color: #f9f9f9;
+}

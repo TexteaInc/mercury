@@ -14,7 +14,6 @@ import {
 import { useAtom } from "jotai"
 import { atomWithStorage } from "jotai/utils"
 import _ from "lodash"
-import Link from "next/link"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import Tooltip from "../components/tooltip"
 import { updateSliceArray } from "../utils/mergeArray"
@@ -37,7 +36,7 @@ import {
   DeleteRegular,
   EyeOffRegular,
   EyeRegular,
-  HandRightRegular, HistoryRegular,
+  HandRightRegular,
   IosChevronRightRegular
 } from "@fluentui/react-icons";
 import { Allotment } from "allotment"
@@ -657,6 +656,7 @@ export default function Index() {
                                     Delete
                                   </Button>
                                 </TableCell>
+                                <TableCell className="column_resizer_body" />
                               </TableRow>
                             ))}
                         </TableBody>
