@@ -1,14 +1,6 @@
-- Mismatch:
-    - Fake:
-        - Person
-        - Event
-        - Time
-    - Hyperbole or ignorance:
-        - Person
-        - Event
-        - Time
-- Match:
-    - Person
-    - Event
-    - Time
-- Unsure
+- Unsure/Other
+- Benign 
+- Bad:
+    - Extrinsic
+    - Intrinsic
+    - Distorion

@@ -287,7 +287,7 @@ export default function Index() {
             })
             updateHistory()
           }}
-          message="No hallucinations in this sentence?"
+          message="Check all types that apply."
         />
       ) : (
         <Text
@@ -411,19 +411,19 @@ export default function Index() {
       >
         {JSON.stringify(firstRange) === "[-1,-1]" || viewingRecord != null ? (
           <Button appearance="primary" icon={<HandRightRegular />} onClick={washHand}>
-            Wash Hand
+            De-select/highlight
           </Button>
         ) : (
           <Button icon={<HandRightRegular />} onClick={washHand}>
-            Wash Hand
+            De-select/highlight
           </Button>
         )}
         <Button icon={<ArrowExportRegular />} onClick={exportJSON}>
           Export Labels
         </Button>
-        <Link href="/history/" rel="noopener noreferrer" target="_blank">
-          <Button icon={<HistoryRegular />}>History</Button>
-        </Link>
+        {/* <Link href="/history/" rel="noopener noreferrer" target="_blank">
+          <Button icon={<HistoryRegular />}></Button>
+        </Link> */}
         {/* <Button
           icon={<AddRegular />}
           onClick={() => {
@@ -587,7 +587,7 @@ export default function Index() {
                     <CardHeader
                       header={
                         <Body1>
-                          <strong>History</strong>
+                          <strong>Existing annotations</strong>
                           <Button icon={<ArrowSyncRegular />} style={{ marginLeft: "1em" }} onClick={updateHistory}>
                             Refresh
                           </Button>
@@ -600,15 +600,19 @@ export default function Index() {
                       <Table className="column_resize_table">
                         <TableHeader>
                           <TableRow>
-                            <TableHeaderCell key="summary">Summary</TableHeaderCell>
-                            {/* @ts-ignore */}
-                            <ColumnResize id={1} className="columnResizer" />
                             <TableHeaderCell key="source">Source</TableHeaderCell>
                             {/* @ts-ignore */}
-                            <ColumnResize id={2} className="columnResizer" />
-                            <TableHeaderCell key="consistent">Consistent</TableHeaderCell>
+                            <ColumnResize id={1} className="columnResizer" />
+                            <TableHeaderCell key="summary">Summary</TableHeaderCell>
                             {/* @ts-ignore */}
-                            <ColumnResize id={3} className="columnResizer" />
+                            <ColumnResize id={2} className="columnResizer" />
+                            <TableHeaderCell key="consistent">Label(s)</TableHeaderCell>
+                            {/* @ts-ignore */}
+                            <ColumnResize id={3} className="columnResizer" /> 
+                            <TableHeaderCell key="note">Note</TableHeaderCell>
+                            {/* @ts-ignore */}
+                            <ColumnResize id={4} className="columnResizer" /> 
+                            {/* TODO: Display the resizer. Now they are invisible. */}
                             <TableHeaderCell key="actions">Actions</TableHeaderCell>
                           </TableRow>
                         </TableHeader>
@@ -627,6 +631,8 @@ export default function Index() {
                                 <TableCell className="column_resizer_body" />
                                 <TableCell>{record.consistent.join(", ")}</TableCell>
                                 <TableCell className="column_resizer_body" />
+                                <TableCell>{record.note}</TableCell>
+                                <TableCell className="column_resizer_body" />
                                 <TableCell>
                                   {viewingRecord != null && viewingRecord.record_id === record.record_id ? (
                                     <Button icon={<EyeOffRegular />} appearance="primary" onClick={washHand}>
@@ -639,7 +645,7 @@ export default function Index() {
                                         setViewingRecord(record)
                                       }}
                                     >
-                                      Preview
+                                      Show
                                     </Button>
                                   )}
                                   <Button

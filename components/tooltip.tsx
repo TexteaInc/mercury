@@ -147,7 +147,7 @@ const Tooltip = (props: {
           }}
           {...getFloatingProps()}
         >
-          {props.score <= 50 ? <Title3>Matchness: {props.score}</Title3> : <Title3>Labeling</Title3>}
+          {props.score <= 50 ? <Title3>Matchness: {props.score}</Title3> : <Title3>Hallucinated?</Title3>}
           <br />
           <Text as="p">{props.message}</Text>
           <br />
@@ -201,6 +201,9 @@ const Tooltip = (props: {
           <br />
           <Textarea 
             resize="both"
+            style={{
+              width: "100%",
+            }}
             placeholder="Note"
             value={note}
             onChange={(_, data) => setNote(data.value)}
@@ -220,7 +223,7 @@ const Tooltip = (props: {
               .then(() => setOpen(false))
             }}
           >
-            Submit
+            Save
           </Button>
         </div>
       )}
