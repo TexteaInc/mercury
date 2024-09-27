@@ -217,8 +217,9 @@ async def post_selections(task_index: int, selection: Selection):
     else:
         text_type = "summary"
 
-    chunk_id_and_text = database.db.execute(sql_cmd, [text_type, task_index + 1]).fetchall()
-    search_chunk_ids = [str(row[0]) for row in chunk_id_and_text]
+    chunk_id_and_text = database.db.execute(sql_cmd, [text_type, task_index]).fetchall()
+    search_chunk_ids = [row[0] for row in chunk_id_and_text]
+    vecter_db_row_ids = [str(x+1) for x in search_chunk_ids] # rowid starts from 1 while chunk_id starts from 0
 
     if len(search_chunk_ids) == 1: # no need for vector search
         selections = [{
@@ -240,7 +241,7 @@ async def post_selections(task_index: int, selection: Selection):
         " WHERE rowid IN ({0})" \
         "AND embedding MATCH '{1}'  \
         ORDER BY distance \
-        LIMIT 5;".format(', '.join(search_chunk_ids), embedding)
+        LIMIT 5;".format(', '.join(vecter_db_row_ids), embedding)
     # print ("SQL_CMD", sql_cmd)
     
     # vector_search_result = database.db.execute(sql_cmd, [*search_chunk_ids, serialize_f32(embedding)]).fetchall()
@@ -309,4 +310,18 @@ async def history():
 
 if __name__ == "__main__":
     app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
-    uvicorn.run(app, port=8000)
+
+    import argparse
+
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--sqlite_db", type=str, default="./mercury.sqlite")
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args()
+
+    database = Database(args.sqlite_db)
+
+    tasks = database.fetch_data_for_labeling()
+    configs = database.fetch_configs()
+    embedder = Embedder(configs["embedding_model_id"])
+
+    uvicorn.run(app, port=args.port)

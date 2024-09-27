@@ -9,7 +9,7 @@ Therefore, Mercury is very efficient for the labeling of NLP tasks that involve 
 
 Currently, Mercury only supports labeling inconsistencies between the source and summary for summarization in RAG.
 
-![Header](.github/header.png)
+![Header](usage/selection_from_highlight.png)
 
 ## Dependencies
 
@@ -96,6 +96,8 @@ Terminology:
 * A **document** is either a source or a summary.
 * A **chunk** is a sentence in a document.
 
+> [!NOTE] SQLite uses 1-indexed for `autoincrement` columns while the rest of the code uses 0-indexed. 
+
 ### Tables 
 
 Three tables: `chunks`, `embeddings`, and `annotations`. All powered by SQLite. In particular, `embeddings` is powered by `sqlite-vec`. 
@@ -114,22 +116,21 @@ A JSONL file like this:
 
 will be ingested into the `chunks` table as below:
 
-| chunk_id | text                       | text_type | sample_id | char_offset | chunk_offset|
+| chunk_id | text                       | text_type | sample _id | char _offset | chunk _offset|
 |----------|----------------------------|-----------|-----------|-------------|-------------|
-| 1        | "The quick brown fox."     | source    | 1         | 0           | 0           |
-| 2        | "Jumps over the lazy dog." | source    | 1         | 21          | 1           |
-| 3        | "We the people."           | source    | 2         | 0           | 0           |
-| 4        | "Of the U.S.A."            | source    | 2         | 15          | 1           |
-| 5        | "26 letters."              | summary   | 1         | 0           | 0           |
-| 6        | "The U.S. Constitution."   | summary   | 2         | 0           | 0           |
-| 7        | "It is great."             | summary   | 2         | 23          | 1           |
+| 0        | "The quick brown fox."     | source    | 0         | 0           | 0           |
+| 1        | "Jumps over the lazy dog." | source    | 0         | 21          | 1           |
+| 2        | "We the people."           | source    | 1         | 0           | 0           |
+| 3        | "Of the U.S.A."            | source    | 1         | 15          | 1           |
+| 4        | "26 letters."              | summary   | 0         | 0           | 0           |
+| 5        | "The U.S. Constitution."   | summary   | 1         | 0           | 0           |
+| 6        | "It is great."             | summary   | 1         | 23          | 1           |
 
 Meaning of select columns: 
-* `char_offset_local` is the offset of a chunk in its parent document measured by the starting character of the chunk. It allows us to find the chunk in the document. 
+* `char_offset` is the offset of a chunk in its parent document measured by the starting character of the chunk. It allows us to find the chunk in the document. 
 * `chunk_offset_local` is the index of a chunk in its parent document. It is used to find the chunk in the document.
 * `text_type` is takes value from the ingestion file. `source` and `summary` for now.
-* 1-indexed columns: `chunk_id` and `sample_id`. 
-* 0-indexed columns: `char_offset_local` and `chunk_offset_local`.
+* All columns are 0-indexed. 
 
 #### `embeddings` table: the embeddings of chunks
 
@@ -138,19 +139,21 @@ Meaning of select columns:
 | 1        | [0.1, 0.2, ..., 0.9] |
 | 2        | [0.2, 0.3, ..., 0.8] |
 
-* `id` here and `chunk_id` in the `chunks` table have one-to-one correspondence.
+* `rowid` here and `chunk_id` in the `chunks` table have one-to-one correspondence. `rowid` is 1-indexed due to `sqlite-vec`. We cannot do anything about it. So when aligning the tables `chunks` and `embeddings`, remember to subtract 1 from `rowid` to get `chunk_id`.
 
 #### `annotations` table: the human annotations
 
-| annot_id | sample _id | annot_spans                              |  annotator | label      |
-|----------|------------|-----------------------------------------|-----------|------------|
-| 1        | 1          | {'source': (1, 10), 'summary': (7, 10)} | Alice     | ["ambivalent"] |
-| 2        | 1          | {'summary': (2, 8)}                     | Bob       | ["extrinsic"]  |
+| annot_id | sample _id | annot_spans                             | annotator | label      | note |
+|----------|------------|-----------------------------------------|-----------|------------|------|
+| 1        | 1          | {'source': [1, 10], 'summary': [7, 10]} | Alice     | ["ambivalent"] | "I am not sure." |
+| 2        | 1          | {'summary': [2, 8]}                     | Bob       | ["extrinsic"]  | "No connection to the source." |
 
-* `src_chunk_id` and `summ_chunk_id` are the `id`'s of chunks in the `corpus` table.
+* `sample_id` are the `id`'s of chunks in the `chunks` table.
 * `text_spans` is a JSON text field that stores the text spans selected by the annotator. Each entry is a dictionary where keys must be those in the `text_type` column in the `chunks` table (hardcoded to  `source` and `summary` now) and the values are lists of two integers: the start and end indices of the text span in the chunk. For extrinsic hallucinations (no connection to the source at all), only `summary`-key items. The reason we use JSON here is that SQLite does not support array types.
 
 #### `config` table: the configuration
+
+For example: 
 
 | key      | value |
 |----------|-------|
@@ -181,22 +184,22 @@ SQLite-vec uses Euclidean distance for vector search. So all embeddings much be 
 Here is a running example (using the data [above](#chunks-table-chunks-and-metadata)): 
 
 1. Suppose the data has been ingested. The embedder is `openai/`text-embedding-3-small` and the embedding dimension is 4.
-2. Suppose the user selects `doc_id` 2 and `chunk_id` 6: "The U.S. Constitution." The `text_type` of `chunk_id` 6 is `summary` -- the opposite document is the source. 
+2. Suppose the user selects `sample_id = 1` and `chunk_id = 5`: "The U.S. Constitution." The `text_type` of `chunk_id = 5` is `summary` -- the opposite document is the source. 
 3. Let's get the chunk IDs of the source document: 
     ```sql
     SELECT chunk_id
     FROM chunks
-    WHERE doc_id = 2 and text_type = 'source'
+    WHERE sample_id = 1 and text_type = 'source'
     ```
-    The return is `4, 5`. 
-4. The embedding of "The U.S. Constitution" can be obtained from the `embeddings` table by `where rowid = 6`.
+    The return is `2, 3`. 
+4. The embedding of "The U.S. Constitution" can be obtained from the `embeddings` table by `where rowid = 6`. Note that because SQLite uses 1-indexed, so we need to add 1 from `chunk_id` to get `rowid`.
    ```sql
     SELECT embedding
     FROM embeddings
     WHERE rowid = 6
     ```
     The return is `[0.08553484082221985, 0.21519172191619873, 0.46908700466156006, 0.8522521257400513]`.
-5. Now We search for its nearest neighbors in its corresponding source chunks of `rowid` 4 and 5. 
+5. Now We search for its nearest neighbors in its corresponding source chunks of `rowid` 4 and 5 -- again, obtained by adding 1 from `chunk_id` 2 and 3 obtained in step 3. 
     ```sql
     SELECT
         rowid,
@@ -206,7 +209,8 @@ Here is a running example (using the data [above](#chunks-table-chunks-and-metad
     and rowid in (4, 5) 
     ORDER BY distance
     ```
-    The return is `[(4, 0.3506483733654022), (5, 1.1732779741287231)]`. The closest source chunk is "We the people" (`rowid=4`) which is the most famous three words in the U.S. Constitution. 
+    The return is `[(4, 0.3506483733654022), (5, 1.1732779741287231)]`. 
+6. Translate the `rowid` back to `chunk_id` by subtracting 4 and 5 to get 2 and 3. The closest source chunk is "We the people" (`rowid=3` while `chunk_id`=2) which is the most famous three words in the US Constitution. 
 
 ### Limitations
 1. OpenAI's embedding endpoint can only embed up to 8192 tokens in each call. 

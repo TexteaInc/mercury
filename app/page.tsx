@@ -340,7 +340,7 @@ export default function Index() {
                 })
                 updateHistory()
               }}
-              message="Are the two texts consistent?"
+              message="Select the type(s) of hallucinatin below."
             />
             ) : (
             <Text
@@ -623,9 +623,9 @@ export default function Index() {
                             })
                             .map((record, index) => (
                               <TableRow key={record.record_id}>
-                                <TableCell>{currentTask.sum.slice(record.summary_start, record.summary_end)}</TableCell>
-                                <TableCell className="column_resizer_body" />
                                 <TableCell>{currentTask.doc.slice(record.source_start, record.source_end)}</TableCell>
+                                <TableCell className="column_resizer_body" />
+                                <TableCell>{currentTask.sum.slice(record.summary_start, record.summary_end)}</TableCell>
                                 <TableCell className="column_resizer_body" />
                                 <TableCell>{record.consistent.join(", ")}</TableCell>
                                 <TableCell className="column_resizer_body" />

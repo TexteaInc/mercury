@@ -148,7 +148,7 @@ class Ingester:
     def ingest(self):
         """Chunk the data, embed the chunks, and save to the database."""
 
-        global_chunk_id = 1 # the id of the chunk in tables, starting from 1
+        global_chunk_id = 0 # the id of the chunk in tables, starting from 1
         for text_type, docs in self.text.items():
             print (f"Processing {text_type}")
             for sample_id in tqdm(range(0, len(docs)), desc="Sample"): # simple, just chunk and embed one doc each time
@@ -159,7 +159,7 @@ class Ingester:
                     # print ([global_chunk_id, chunk_text, text_type, sample_id+1, char_offset, chunk_offset])
                     self.db.execute(
                         "INSERT INTO chunks (chunk_id, text, text_type, sample_id, char_offset, chunk_offset) VALUES (?, ?, ?, ?, ?, ?)",
-                        [global_chunk_id, chunk_text, text_type, sample_id+1, char_offset, chunk_offset]
+                        [global_chunk_id, chunk_text, text_type, sample_id, char_offset, chunk_offset]
                     )
                     self.db.commit()
                     self.db.execute(
