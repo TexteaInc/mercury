@@ -13,21 +13,30 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react"
-import { Button, Checkbox, Dropdown, OptionGroup, Text, Title3 } from "@fluentui/react-components"
-import { useState } from "react"
+import { Button, Checkbox, Text, Textarea, Title3 } from "@fluentui/react-components"
+import { useEffect, useState } from "react"
+
+
+const mixedToBoolean = (checked: "mixed" | boolean): boolean => {
+  if (checked === "mixed") {
+    return true
+  }
+  return checked
+}
 
 const Tooltip = (props: {
   backgroundColor: string
   text: string
   score: number
   labels: (string | object)[]
-  onLabel: (label: string[]) => Promise<void>
+  onLabel: (label: string[], note: string) => Promise<void>
   start: number
   end: number
   message: string
 }) => {
   const [isOpen, setOpen] = useState(false)
-  const [useEnable, setUseEnable] = useState(true)
+  const [note, setNote] = useState("")
+  const [lock, setLock] = useState(false)
   const [labelsStates, setLabelsStates] = useState({})
   const { refs, floatingStyles, context } = useFloating({
     open: isOpen,
@@ -38,7 +47,7 @@ const Tooltip = (props: {
     strategy: "fixed",
     placement: "top",
   })
-  const hover = useHover(context, { move: false, handleClose: safePolygon(), enabled: useEnable })
+  const hover = useHover(context, { move: false, handleClose: safePolygon(), enabled: !lock })
   const focus = useFocus(context)
   const click = useClick(context, { enabled: false })
   const dismiss = useDismiss(context)
@@ -48,19 +57,42 @@ const Tooltip = (props: {
   const clientPoint = useClientPoint(context, { axis: "x", enabled: !isOpen })
   const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, dismiss, role, clientPoint, click])
   
+  useEffect(() => {
+    if (!lock && Object.keys(labelsStates).length !== 0) {
+      setLock(true)
+    }
+  }, [labelsStates])
+  
   // I put this here, because I want to access the labelsStates for convenience
   const CustomOption = (props: { value: unknown, keys: string[] }) => {
+    const level = props.keys.length + 1
     // is object and not array
     if (typeof props.value === "object" && !Array.isArray(props.value)) {
       const key = Object.keys(props.value)[0]
       const value = Object.values(props.value)[0]
       
-      return <OptionGroup
-        label={key}
+      return (<>
+      <Checkbox
         id={`label-${key}`}
-        >
-          <CustomOption value={value} keys={[...props.keys, key]} />
-        </OptionGroup>
+        checked={labelsStates[key]}
+        onChange={(_, data) => {
+          setLabelsStates({
+            ...labelsStates,
+            [key]: mixedToBoolean(data.checked)
+          })
+        }}
+        label={key}
+        style={{
+          marginLeft: `${(level - 1) * 0.5}rem`
+        }}
+      />
+      <div style={{
+        display: labelsStates[key] ? "flex" : "none",
+        flexDirection: "column",
+      }}>
+        <CustomOption value={value} keys={[...props.keys, key]} />
+      </div>
+      </>)
     }
     
     // is array
@@ -75,11 +107,14 @@ const Tooltip = (props: {
     return <Checkbox
       id={`label-${value_}`}
       checked={labelsStates[value_]}
-      onChange={(checked) => setLabelsStates({
+      onChange={(_, data) => setLabelsStates({
         ...labelsStates,
-        [value_]: checked
+        [value_]: mixedToBoolean(data.checked)
       })}
       label={props.value}
+      style={{
+        marginLeft: `${(level - 1) * 0.5}rem`
+      }}
     />
   }
   
@@ -99,6 +134,7 @@ const Tooltip = (props: {
       </Text>
       {isOpen && (
         <div
+          data-mercury-disable-selection="true"
           ref={refs.setFloating}
           style={{
             ...floatingStyles,
@@ -120,22 +156,25 @@ const Tooltip = (props: {
             marginTop: "1rem",
             gap: "1rem",
             flexWrap: "wrap",
-            // column
-            flexDirection: "column",
           }}>
             {
               props.labels.map(label => {
                 if (typeof label === "string") {
-                  return <Checkbox
+                  return <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                  }}>
+                    <Checkbox
                       id={`label-${label}`}
                       key={label}
                       checked={labelsStates[label]}
-                      onChange={(checked) => setLabelsStates({
+                      onChange={(_, data) => setLabelsStates({
                         ...labelsStates,
-                        [label]: checked
+                        [label]: mixedToBoolean(data.checked)
                       })}
                       label={label}
-                  />
+                    />
+                  </div>
                 }
                 
                 const key = Object.keys(label)[0]
@@ -144,30 +183,42 @@ const Tooltip = (props: {
                     display: "flex",
                     flexDirection: "column",
                   }}>
-                    <label id={`label-${key}`}>{key}</label>
-                    <Dropdown
-                      aria-labelledby={`label-${key}`}
-                      multiselect
-                      placeholder="Select labels"
-                      id={`label-${key}-dropdown`}
-                      onOpenChange={(_, data) => {
-                        setUseEnable(!data.open)
-                      }}
-                    >
-                      <CustomOption value={Object.values(label)[0]} keys={[Object.keys(label)[0]]} />
-                    </Dropdown>
+                    <Checkbox 
+                      id={`label-${key}`}
+                      checked={labelsStates[key]}
+                      onChange={(_, data) => setLabelsStates({
+                        ...labelsStates,
+                        [key]: mixedToBoolean(data.checked)
+                      })}
+                      label={key}
+                    />
+                    {labelsStates[key] && <CustomOption value={Object.values(label)[0]} keys={[Object.keys(label)[0]]} />}
                   </div>
                 )
               })
             }
           </div>
           <br />
+          <Textarea 
+            resize="both"
+            placeholder="Note"
+            value={note}
+            onChange={(_, data) => setNote(data.value)}
+          />
+          <br />
           <Button
-              onMouseDown={(event) => {
-                event.stopPropagation()
-                event.preventDefault()
-                props.onLabel(Object.keys(labelsStates).filter((label) => labelsStates[label])).then(() => setOpen(false))
-              }}
+            style={{
+              marginTop: "1rem",
+            }}
+            onMouseDown={(event) => {
+              event.stopPropagation()
+              event.preventDefault()
+              props.onLabel(
+                Object.keys(labelsStates).filter((label) => labelsStates[label]),
+                note
+              )
+              .then(() => setOpen(false))
+            }}
           >
             Submit
           </Button>

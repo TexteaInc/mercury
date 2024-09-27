@@ -13,6 +13,7 @@ export type LabelRequest = {
   source_start: number
   source_end: number
   consistent: string[]
+  note: string
 }
 
 export type SelectionRequest = {
@@ -57,4 +58,5 @@ export type LabelData = {
   consistent: string[]
   task_index: number
   user_id: string
+  note: string
 }

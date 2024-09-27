@@ -20,6 +20,7 @@ class OldLabelData(TypedDict):  # readable by frontend
     consistent: str # used to be boolean 
     task_index: int # traditionally, \d+ where \d is the sample number, e.g., 15
     user_id: str
+    note: str
 
 class AnnotSpan(TypedDict): # In future expansion, the fields can be any user-defined fields
     source: tuple[int, int] # optional
@@ -31,6 +32,7 @@ class LabelData(TypedDict):  # human annotation on a sample
     annot_spans: AnnotSpan
     annotator: str
     label: str  # json string
+    note: str
 
 def convert_LabelData(lb: LabelData | OldLabelData, direction: Literal["new2old", "old2new"] ) -> LabelData | OldLabelData: 
     if direction == "old2new":
@@ -43,7 +45,8 @@ def convert_LabelData(lb: LabelData | OldLabelData, direction: Literal["new2old"
                 "summary": (lb["summary_start"], lb["summary_end"])
             },
             "annotator": lb["user_id"],
-            "label": lb["consistent"]
+            "label": lb["consistent"],
+            "note": lb["note"]
         }
     elif direction == "new2old":
         return {
@@ -56,7 +59,8 @@ def convert_LabelData(lb: LabelData | OldLabelData, direction: Literal["new2old"
             "source_end": lb["annot_spans"].get("source", (-1, -1))[1],
             "consistent": lb["label"],
             "task_index": lb["sample_id"],
-            "user_id": lb["annotator"]
+            "user_id": lb["annotator"],
+            "note": lb["note"]
         }
 
 class AnnotationLabelItem(TypedDict):
@@ -67,7 +71,8 @@ class AnnotationLabelItem(TypedDict):
 class AnnotationItem(TypedDict):
     source: AnnotationLabelItem
     summary: AnnotationLabelItem
-    consistent: bool
+    # This is the same as the LabelData type
+    consistent: str
     annotator: str
 
 
@@ -151,7 +156,8 @@ class Database:
                    sample_id INTEGER, \
                    annot_spans TEXT, \
                    annotator TEXT, \
-                   label TEXT)")
+                   label TEXT, \
+                   note TEXT)")
         db.enable_load_extension(True)
         sqlite_vec.load(db)
         db.enable_load_extension(False)
@@ -267,12 +273,13 @@ class Database:
         # ).any():
         #     return
 
-        sql_cmd = "SELECT * FROM annotations WHERE sample_id = ? AND annot_spans = ? AND annotator = ? AND label = ?"
+        sql_cmd = "SELECT * FROM annotations WHERE sample_id = ? AND annot_spans = ? AND annotator = ? AND label = ? AND note = ?"
         res = self.db.execute(sql_cmd, (
             label_data["sample_id"],
             json.dumps(label_data["annot_spans"]),
             label_data["annotator"],
-            label_data["label"]
+            label_data["label"],
+            label_data["note"]
         ))
         if res.fetchone() is not None:
             return
@@ -299,12 +306,14 @@ class Database:
 
         # label_data = convert_LabelData(label_data, "old2new")
 
-        sql_cmd = "INSERT INTO annotations (sample_id, annot_spans, annotator, label) VALUES (?, ?, ?, ?)"
+        sql_cmd = "INSERT INTO annotations (sample_id, annot_spans, annotator, label, note) VALUES (?, ?, ?, ?, ?)"
         self.db.execute(sql_cmd, (
             label_data["sample_id"],
             json.dumps(label_data["annot_spans"]),
             label_data["annotator"],
-            label_data["label"]))
+            label_data["label"],
+            label_data["note"]
+        ))
         self.db.commit()
 
     @database_lock()
@@ -330,14 +339,15 @@ class Database:
         res = self.db.execute(sql_cmd, (annotator,))
         annotations = res.fetchall()
         label_data = [] # in OldLabelData format
-        for annot_id, sample_id, annot_spans, annotator, label in annotations:
+        for annot_id, sample_id, annot_spans, annotator, label, note in annotations:
             annot_spans = json.loads(annot_spans)
             label_data.append(convert_LabelData({
                 "annot_id": annot_id,
                 "sample_id": sample_id, 
                 "annot_spans": annot_spans,
                 "annotator": annotator,
-                "label": json.loads(label)
+                "label": json.loads(label),
+                "note": note
             }, "new2old"))
         return label_data
 
@@ -352,14 +362,15 @@ class Database:
         res = self.db.execute(sql_cmd, (annotator, sample_id))
         annotations = res.fetchall()
         label_data = []
-        for annot_id, sample_id, annot_spans, annotator, label in annotations:
+        for annot_id, sample_id, annot_spans, annotator, label, note in annotations:
             annot_spans = json.loads(annot_spans)
             label_data.append(convert_LabelData({
                 "annot_id": annot_id,
                 "sample_id": sample_id, 
                 "annot_spans": annot_spans,
                 "annotator": annotator,
-                "label": json.loads(label)
+                "label": json.loads(label),
+                "note": note
             }, "new2old"))
         return label_data
 
@@ -370,7 +381,7 @@ class Database:
             dump_file: str = "mercury_annotations.json",
             # source_corpus_id: int | None = None,
             # summary_corpus_id: int | None = None,
-    ) -> list[AnnotationData]:
+    ):
         # if source_corpus_id is None or summary_corpus_id is None:
         #     raise ValueError("Source and Summary corpus IDs are required.")
 
@@ -467,7 +478,7 @@ class Database:
         # match annotations with chunks by doc_id
         results = []
         results_dict = {} # keys are sample_id, values are source text, summary text, and each pair of spans and labels and annotators
-        for annot_id, sample_id, annot_spans, annotator, label in annotations:
+        for annot_id, sample_id, annot_spans, annotator, label, note in annotations:
             # find the source and summary text by doc_id
             full_texts = {}
             for text_type in ["source", "summary"]:
@@ -477,7 +488,7 @@ class Database:
                 text = [t[0] for t in text]
                 full_texts[text_type] = " ".join(text)
             
-            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": json.loads(label)}
+            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": json.loads(label), "note": note}
             # annot_spans example: {'source': (1, 10), 'summary': (7, 10)}
             annot_spans = json.loads(annot_spans)
             for text_type, (start, end) in annot_spans.items():

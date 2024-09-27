@@ -200,6 +200,8 @@ export default function Page() {
               <strong>Source:</strong> {label.source_start} - {label.source_end}
               <br />
               <strong>Consistent:</strong> {label.consistent.join(", ")}
+              <br />
+              <strong>Note:</strong> {label.note}
             </Text>
             <CardFooter>
               <Button

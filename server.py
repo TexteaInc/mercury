@@ -100,6 +100,7 @@ class Label(BaseModel):
     source_start: int
     source_end: int
     consistent: list[str]
+    note: str
 
 class Selection(BaseModel):
     start: int
@@ -176,7 +177,8 @@ async def post_task(task_index: int, label: Label, user_key: Annotated[str, Head
         "sample_id": sample_id,
         "annotator": annotator,
         "label": label_string,
-        "annot_spans": annot_spans
+        "annot_spans": annot_spans,
+        "note": label.note
     }) # the label_data is in databse.OldLabelData format
     return {"message": "success"}
 

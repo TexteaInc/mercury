@@ -162,6 +162,16 @@ export default function Index() {
       const selection = window.getSelection()
       const target = event.target as HTMLElement
       
+      const mercuryElements = document.querySelectorAll("[data-mercury-disable-selection]")
+      
+      console.log(mercuryElements)
+      
+      for (const element of mercuryElements) {
+        if (element.contains(target)) {
+          return
+        }
+      }
+      
       if (target.id.startsWith("label-")) {
         return
       }
@@ -263,7 +273,7 @@ export default function Index() {
           text={props.text.slice(slice[0], slice[1] + 1)}
           score={99}
           labels={labels}
-          onLabel={async (label) => {
+          onLabel={async (label, note) => {
             if (firstRange === null || rangeId === null) {
               return Promise.resolve()
             }
@@ -272,7 +282,8 @@ export default function Index() {
               source_end: rangeId === "summary" ? -1 + 1 : firstRange[1],
               summary_start: rangeId === "summary" ? firstRange[0] : -1,
               summary_end: rangeId === "summary" ? firstRange[1] : -1,
-              consistent: label
+              consistent: label,
+              note: note,
             })
             updateHistory()
           }}
@@ -317,7 +328,7 @@ export default function Index() {
               text={props.text.slice(slice[0], slice[1] + 1)}
               score={score}
               labels={labels}
-              onLabel={async (label) => {
+              onLabel={async (label, note) => {
                 if (firstRange === null || rangeId === null) {
                   return Promise.resolve()
                 }
@@ -326,7 +337,8 @@ export default function Index() {
                   source_end: rangeId === "summary" ? slice[1] + 1 : firstRange[1],
                   summary_start: rangeId === "summary" ? firstRange[0] : slice[0],
                   summary_end: rangeId === "summary" ? firstRange[1] : slice[1] + 1,
-                  consistent: label
+                  consistent: label,
+                  note: note,
                 })
                 updateHistory()
               }}
