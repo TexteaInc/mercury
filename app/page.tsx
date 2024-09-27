@@ -270,7 +270,6 @@ export default function Index() {
           key={`slice-${slice[0]}-${slice[1]}`}
           backgroundColor="#79c5fb"
           text={props.text.slice(slice[0], slice[1] + 1)}
-          score={99}
           labels={labels}
           onLabel={async (label, note) => {
             if (firstRange === null || rangeId === null) {

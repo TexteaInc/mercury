@@ -27,7 +27,7 @@ const mixedToBoolean = (checked: "mixed" | boolean): boolean => {
 const Tooltip = (props: {
   backgroundColor: string
   text: string
-  score: number
+  score?: number
   labels: (string | object)[]
   onLabel: (label: string[], note: string) => Promise<void>
   start: number
@@ -147,7 +147,7 @@ const Tooltip = (props: {
           }}
           {...getFloatingProps()}
         >
-          {props.score <= 50 ? <Title3>Matchness: {props.score}</Title3> : <Title3>Hallucinated?</Title3>}
+          {typeof props.score === "number" ? <Title3>Matchness: {props.score.toFixed(2)}</Title3> : <Title3>Hallucinated?</Title3>}
           <br />
           <Text as="p">{props.message}</Text>
           <br />
