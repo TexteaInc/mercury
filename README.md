@@ -56,7 +56,8 @@ Mercury uses [`sqlite-vec`](https://github.com/asg017/sqlite-vec) to store and s
 
    The ingester takes a CSV, JSON, or JSONL file and loads texts from two text columns (configurable via option `ingest_column_1` and `ingest_column_2` which default to `source` and `summary`) of the file. Mercury uses three Vectara corpora to store the sources, the summaries, and the human annotations. You can provide the corpus IDs to overwrite or append data to existing corpora.
 
-2. `pnpm install && pnpm build` 
+2. `pnpm install && pnpm build` (You need to recompile the frontend each time the UI code changes.)
+4. Manually set the labels for annotators to choose from in the `labels.yaml` file. Mercury supports hierarchical labels. 
 3. `python3 server.py`. Be sure to set the candidate labels to choose from in the `server.py` file.
 
 The annotations are stored in the `annotations` table in a SQLite database (hardcoded name `mercury.sqlite`). See the section [`annotations` table](#annotations-table-the-human-annotations) for the schema.

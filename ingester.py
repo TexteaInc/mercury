@@ -97,10 +97,15 @@ class Ingester:
         self.db.enable_load_extension(False)
 
         if self.overwrite_data:
-            self.db.execute("DROP TABLE IF EXISTS chunks")
-            self.db.execute("DROP TABLE IF EXISTS embeddings")
-            self.db.execute("DROP TABLE IF EXISTS config")
-            self.db.commit()
+            print ("\n************* BE CAREFUL *************")
+            print (f"By turning on --overwrite_data, you chooose to remove all data (chunks, embeddings, and annotations) in the database file `{self.sqlite_db_path}`. If you just wanna udpate one table/column, contact Forrest to migrate the data or add a new feature. Type UPPERCASE 'YES' if you still want to proceed.")
+            answer = input()
+            if answer == "YES":
+                self.db.execute("DROP TABLE IF EXISTS chunks")
+                self.db.execute("DROP TABLE IF EXISTS embeddings")
+                self.db.execute("DROP TABLE IF EXISTS config")
+                self.db.execute("DROP TABLE IF EXISTS annotations")
+                self.db.commit()
 
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS chunks (chunk_id INTEGER PRIMARY KEY, text TEXT, text_type TEXT, sample_id INTEGER, char_offset INTEGER, chunk_offset INTEGER)"
