@@ -39,61 +39,6 @@ def serialize_f32(vector: List[float]) -> bytes:
     """serializes a list of floats into a compact "raw bytes" format"""
     return struct.pack("%sf" % len(vector), *vector)
 
-##### Prepare corpus IDs #####
-# try:
-#     source_corpus_id = int(os.environ["SOURCE_CORPUS_ID"])
-# except KeyError:
-#     source_corpus_id = int(
-#         input(
-#             "No source corpus ID found in .env file. Please provide a source corpus id: "
-#         )
-#     )
-
-# try:
-#     summary_corpus_id = int(os.environ["SUMMARY_CORPUS_ID"])
-# except KeyError:
-#     summary_corpus_id = int(
-#         input(
-#             "No summary corpus ID found in .env file. Please provide a summary corpus id: "
-#         )
-#     )
-
-# try:
-#     annotation_corpus_id = int(os.environ["ANNOTATION_CORPUS_ID"])
-# except KeyError:
-#     annotation_corpus_id = int(
-#         input(
-#             "No annotation corpus ID found in .env file. Please provide an annotation corpus id: "
-#         )
-#     )
-##### End of preparing corpus IDs #####
-
-database = Database("./mercury.sqlite")
-
-# def fetch_data_for_labeling(source_corpus_id, summary_corpus_id):
-#     """Fetch the source-summary pairs for labeling from Vectara server."""
-#     data_for_labeling = {}
-#     for doc_type in ["source", "summary"]:
-#         corpus_id = source_corpus_id if doc_type == "source" else summary_corpus_id
-#         for doc in vectara_client.list_all_documents(corpus_id):
-#             id_ = doc["id"]
-#             for metadata in doc["metadata"]:
-#                 if metadata["name"] == "text":
-#                     text = metadata["value"]
-#             data_for_labeling.setdefault(id_, {})[doc_type] = text
-
-#     data_for_labeling = [{"_id": k, **v} for k, v in data_for_labeling.items()]
-#     data_for_labeling.sort(key=lambda x: int(x["_id"].split("_")[1]))
-#     return data_for_labeling
-
-
-# tasks = fetch_data_for_labeling(source_corpus_id, summary_corpus_id)
-
-tasks = database.fetch_data_for_labeling()
-configs = database.fetch_configs()
-embedder = Embedder(configs["embedding_model_id"])
-# TODO: the name 'tasks' can be misleading. It should be changed to something more descriptive.
-
 class Label(BaseModel):
     summary_start: int
     summary_end: int
@@ -307,8 +252,8 @@ async def delete_annotation(record_id: str, user_key: Annotated[str, Header()]):
 async def history():
     return FileResponse("dist/history.html")
 
-
 if __name__ == "__main__":
+
     app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
 
     import argparse
@@ -318,8 +263,11 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
 
+    print ("Using sqlite db: ", args.sqlite_db)
+
     database = Database(args.sqlite_db)
 
+    # TODO: the name 'tasks' can be misleading. It should be changed to something more descriptive.
     tasks = database.fetch_data_for_labeling()
     configs = database.fetch_configs()
     embedder = Embedder(configs["embedding_model_id"])

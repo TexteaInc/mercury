@@ -151,6 +151,7 @@ class Database:
 
         # prepare the database
         db = sqlite3.connect(sqlite_db_path)
+        print ("Open db at ", sqlite_db_path)
         db.execute("CREATE TABLE IF NOT EXISTS annotations (\
                    annot_id INTEGER PRIMARY KEY AUTOINCREMENT, \
                    sample_id INTEGER, \
@@ -406,6 +407,22 @@ class Database:
             results_dict[sample_id]["annotations"].append(result_local)
 
         results_nested = [{"sample_id": key, **value} for key, value in results_dict.items()]
+
+        # TODO: copy and paste from dump_annotation is too ugly. Please turn common code to a function
+
+        sql_cmd = "SELECT * from sample_meta" # get the metadata
+        res = self.db.execute(sql_cmd)
+        sample_meta = res.fetchall()
+        sample_meta_dict = {sample_id: json.loads(json_meta) for sample_id, json_meta in sample_meta}
+        sample_meta_dict = {sample_id: {f"meta_{k}": v for k, v in meta.items()} for sample_id, meta in sample_meta_dict.items()}
+
+        # add metadata to each dict in results_nested
+        new_results_nested = []
+        for result in results_nested:
+            sample_id = result["sample_id"]
+            new_results_nested.append(result | sample_meta_dict[sample_id])
+        results_nested = new_results_nested
+
         return results_nested
 
     @database_lock()
@@ -416,94 +433,6 @@ class Database:
             # source_corpus_id: int | None = None,
             # summary_corpus_id: int | None = None,
     ):
-        # if source_corpus_id is None or summary_corpus_id is None:
-        #     raise ValueError("Source and Summary corpus IDs are required.")
-
-        # def get_source_and_summary_from_sample_id(sample_id: str) -> tuple[str, str]:
-        #     source_response = self.vectara_client.list_documents_with_filter(
-        #         corpus_id=source_corpus_id,
-        #         numResults=1,
-        #         pageKey=None,
-        #         metadataFilter=f"doc.id = '{sample_id}'",
-        #     )
-        #     summary_response = self.vectara_client.list_documents_with_filter(
-        #         corpus_id=summary_corpus_id,
-        #         numResults=1,
-        #         pageKey=None,
-        #         metadataFilter=f"doc.id = '{sample_id}'",
-        #     )
-        #     if (
-        #             len(source_response["document"]) < 0
-        #             or len(summary_response["document"]) < 0
-        #     ):
-        #         raise ValueError(
-        #             f"Sample ID {sample_id} not found in source or summary corpus."
-        #         )
-
-        #     source_metadata = metadata_to_dict(
-        #         source_response["document"][0]["metadata"]
-        #     )
-        #     summary_metadata = metadata_to_dict(
-        #         summary_response["document"][0]["metadata"]
-        #     )
-
-        #     source = source_metadata["text"]
-        #     summary = summary_metadata["text"]
-
-        #     return source, summary
-
-        # result: list[AnnotationData] = []
-
-        # with_id: dict[str, AnnotationData] = {}
-
-        # id_source_summary: dict[str, dict[Literal["source", "summary"], str]] = {}
-
-        # for doc in self.vectara_client.list_all_documents(self.annotation_corpus_id):
-        #     metadata = metadata_to_dict(doc["metadata"])
-        #     sample_id = metadata["sample_id"]
-        #     if sample_id not in id_source_summary:
-        #         source, summary = get_source_and_summary_from_sample_id(sample_id)
-        #         id_source_summary[sample_id] = {"source": source, "summary": summary}
-        #     if sample_id not in with_id:
-        #         with_id[sample_id] = {
-        #             "source": id_source_summary[sample_id]["source"],
-        #             "summary": id_source_summary[sample_id]["summary"],
-        #             "annotations": [],
-        #         }
-        #     with_id[sample_id]["annotations"].append(
-        #         {
-        #             "source": {
-        #                 "start": metadata["source_start"],
-        #                 "end": metadata["source_end"],
-        #                 "text": with_id[sample_id]["source"][
-        #                         metadata["source_start"]: metadata["source_end"]
-        #                         ],
-        #             },
-        #             "summary": {
-        #                 "start": metadata["summary_start"],
-        #                 "end": metadata["summary_end"],
-        #                 "text": with_id[sample_id]["summary"][
-        #                         metadata["summary_start"]: metadata["summary_end"]
-        #                         ],
-        #             },
-        #             "consistent": metadata["consistent"],
-        #             "annotator": metadata["user_id"],
-        #         }
-        #     )
-
-        # for sample_id, data in with_id.items():
-        #     result.append(
-        #         {
-        #             "source": data["source"],
-        #             "summary": data["summary"],
-        #             "annotations": data["annotations"],
-        #         }
-        #     )
-
-        # with open(dump_file, "w") as f:
-        #     json.dump(result, f, indent=4, ensure_ascii=False)
-
-        # return result
 
         sql_cmd = "SELECT * FROM annotations"
         res = self.db.execute(sql_cmd)
