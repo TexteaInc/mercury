@@ -272,4 +272,4 @@ if __name__ == "__main__":
     configs = database.fetch_configs()
     embedder = Embedder(configs["embedding_model_id"])
 
-    uvicorn.run(app, port=args.port)
+    uvicorn.run(app, port=args.port, host="0.0.0.0")
