@@ -67,25 +67,32 @@ The dumped human annotations are stored in a JSON format like this:
 ```python
 [
     {# first sample 
+        'sample_id': int,
         'source': str, 
         'summary': str,
         'annotations': [ # a list of annotations from many human annotators
             {
-                'source': {
-                    'text': str,  # text span
-                    'start': int, # charater offset
-                    'end': int,   # character offset
-                },
-                'summary': {
-                    'text': str,
-                    'start': int,
-                    'end': int
-                },
+                'annot_id': int,
+                'sample_id': int, # relative to the ingestion file
+                'annotator': str, 
                 'label': list[str],
-                'annotator': str
+                'note': str,
+                'summary_span': str, # the text span in the summary
+                'summary_start': int,
+                'summary_end': int,
+                'source_span': str, # the text span in the source
+                'source_start': int,
+                'source_end': int,
             }
-        ]
-    }
+        ], 
+        'meta_field_1': Any, # whatever meta info about the sample
+        'meta_field_2': Any, 
+        ...
+    }, 
+    {# second sample
+        ...
+    }, 
+    ...
 ]
 ```
 
@@ -100,7 +107,7 @@ Terminology:
 
 ### Tables 
 
-Three tables: `chunks`, `embeddings`, and `annotations`. All powered by SQLite. In particular, `embeddings` is powered by `sqlite-vec`. 
+Three tables: `chunks`, `embeddings`, `annotations`, and `leaderboard`. All powered by SQLite. In particular, `embeddings` is powered by `sqlite-vec`. 
 
 #### `chunks` table: chunks and metadata
 
@@ -116,9 +123,9 @@ A JSONL file like this:
 
 will be ingested into the `chunks` table as below:
 
-| chunk_id | text                       | text_type | sample _id | char _offset | chunk _offset|
-|----------|----------------------------|-----------|-----------|-------------|-------------|
-| 0        | "The quick brown fox."     | source    | 0         | 0           | 0           |
+| chunk_id | text                       | text_type | sample _id | char _offset | chunk _offset| 
+|----------|----------------------------|-----------|------------|--------------|--------------|
+| 0        | "The quick brown fox."     | source    | 0         | 0           | 0           | 
 | 1        | "Jumps over the lazy dog." | source    | 0         | 21          | 1           |
 | 2        | "We the people."           | source    | 1         | 0           | 0           |
 | 3        | "Of the U.S.A."            | source    | 1         | 15          | 1           |
@@ -131,6 +138,7 @@ Meaning of select columns:
 * `chunk_offset_local` is the index of a chunk in its parent document. It is used to find the chunk in the document.
 * `text_type` is takes value from the ingestion file. `source` and `summary` for now.
 * All columns are 0-indexed. 
+* The `sample_id` is the index of the sample in the ingestion file. Because the ingestion file could be randomly sampled from a bigger dataset, the `sample_id` is not necessarily global. 
 
 #### `embeddings` table: the embeddings of chunks
 
@@ -159,6 +167,16 @@ For example:
 |----------|-------|
 | embdding_model | "openai/text-embedding-3-small" |
 | embdding_dimension | 4 |
+
+
+#### `sample_meta` table: the sample metadata
+
+| sample_id | json_meta | 
+|-----------|-----------|
+| 0         | {"model":"meta-llama\/Meta-Llama-3.1-70B-Instruct","HHEMv1":0.43335,"HHEM-2.1":0.39717,"HHEM-2.1-English":0.90258,"trueteacher":1,"true_nli":0.0,"gpt-3.5-turbo":1,"gpt-4-turbo":1,"gpt-4o":1, "sample_id":727}    |
+| 1         | {"model":"openai\/GPT-3.5-Turbo","HHEMv1":0.43003,"HHEM-2.1":0.97216,"HHEM-2.1-English":0.92742,"trueteacher":1,"true_nli":1.0,"gpt-3.5-turbo":1,"gpt-4-turbo":1,"gpt-4o":1, "sample_id": 1018}    |
+
+0-indexed, the `sample_id` column is the `sample_id` in the `chunks` table. It is local to the ingestion file. The `json_meta` is whatever info other than ingestion columns (source and summary) in the ingestion file.
 
 ### How to do vector search
 

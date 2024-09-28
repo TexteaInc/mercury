@@ -537,6 +537,19 @@ class Database:
 
         results_nested = [{"sample_id": key, **value} for key, value in results_dict.items()]
 
+        sql_cmd = "SELECT * from sample_meta" # get the metadata
+        res = self.db.execute(sql_cmd)
+        sample_meta = res.fetchall()
+        sample_meta_dict = {sample_id: json.loads(json_meta) for sample_id, json_meta in sample_meta}
+        sample_meta_dict = {sample_id: {f"meta_{k}": v for k, v in meta.items()} for sample_id, meta in sample_meta_dict.items()}
+
+        # add metadata to each dict in results_nested
+        new_results_nested = []
+        for result in results_nested:
+            sample_id = result["sample_id"]
+            new_results_nested.append(result | sample_meta_dict[sample_id])
+        results_nested = new_results_nested
+
         with open(dump_file, "w") as f:
             json.dump(results_nested, f, indent=2, ensure_ascii=False)
             #TODO add JSONL support. Automatically detect file format based on filename extension

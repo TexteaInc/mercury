@@ -105,6 +105,7 @@ class Ingester:
                 self.db.execute("DROP TABLE IF EXISTS embeddings")
                 self.db.execute("DROP TABLE IF EXISTS config")
                 self.db.execute("DROP TABLE IF EXISTS annotations")
+                self.db.execute("DROP TABLE IF EXISTS leaderboard")
                 self.db.commit()
 
         self.db.execute(
@@ -117,6 +118,10 @@ class Ingester:
             "CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)"
         )
         self.db.execute(
+            "CREATE TABLE IF NOT EXISTS sample_meta (sample_id INTEGER PRIMARY KEY, json_meta TEXT)"
+        )
+
+        self.db.execute(
             "INSERT OR REPLACE INTO config (key, value) VALUES ('embedding_model_id', ?)",
             [self.embedding_model_id],
         )
@@ -124,6 +129,7 @@ class Ingester:
             "INSERT OR REPLACE INTO config (key, value) VALUES ('embedding_dimension', ?)",
             [self.embedding_dimension],
         )
+        
         self.db.commit()
 
     def load_data_for_ingestion(self) -> Tuple[List[str], List[str]]:
@@ -139,11 +145,19 @@ class Ingester:
         
         df.columns = df.columns.str.lower()
 
-        sources = df[self.ingest_column_1].tolist()
-        summaries = df[self.ingest_column_2].tolist()
+        sources: List[str] = df[self.ingest_column_1].tolist()
+        summaries: List[str] = df[self.ingest_column_2].tolist()
 
         self.text[self.ingest_column_1] = sources
         self.text[self.ingest_column_2] = summaries
+
+        df_other_columns = df.drop(columns=[self.ingest_column_1, self.ingest_column_2])
+        if len(df_other_columns.columns) > 0:
+            sample_ids = range(0, len(sources))
+            json_meta = [row.to_json() for _, row in df_other_columns.iterrows()]
+            cmd = "INSERT INTO sample_meta (sample_id, json_meta) VALUES (?, ?)"
+            self.db.executemany(cmd, zip(sample_ids, json_meta))
+            self.db.commit()
     
     def ingest(self):
         """Chunk the data, embed the chunks, and save to the database."""
