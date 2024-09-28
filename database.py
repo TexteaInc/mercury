@@ -159,6 +159,9 @@ class Database:
                    annotator TEXT, \
                    label TEXT, \
                    note TEXT)")
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, user_name TEXT)"
+        )
         db.enable_load_extension(True)
         sqlite_vec.load(db)
         db.enable_load_extension(False)

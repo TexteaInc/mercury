@@ -121,9 +121,12 @@ class Ingester:
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS sample_meta (sample_id INTEGER PRIMARY KEY, json_meta TEXT)"
         )
-        self.db.execute(
-            "CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, user_name TEXT)"
-        )
+
+        # Below commented by Forrest on 2024-09-28 because `users` is not used in ingestion but annotation
+        # `users` initialization moved to `database.py`
+        # self.db.execute(
+        #     "CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, user_name TEXT)"
+        # )
 
         self.db.execute(
             "INSERT OR REPLACE INTO config (key, value) VALUES ('embedding_model_id', ?)",
