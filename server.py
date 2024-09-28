@@ -52,6 +52,9 @@ class Selection(BaseModel):
     end: int
     from_summary: bool
 
+class Name(BaseModel):
+    name: str
+
 @app.get("/candidate_labels") 
 async def get_labels() -> list: # get all candidate labels for human annotators to choose from
     with open("labels.yaml") as f:
@@ -60,8 +63,27 @@ async def get_labels() -> list: # get all candidate labels for human annotators 
 
 @app.get("/user/new") # please update the route name to be more meaningful, e.g., /user/new_user
 async def create_new_user():
-    return {"key": uuid.uuid4().hex}
+    user_id = uuid.uuid4().hex
+    user_name = "New User"
+    database.add_user(user_id, user_name)
+    return {"key": user_id, "name": user_name}
 
+@app.post("/user/name")
+async def update_user_name(name: Name, user_key: Annotated[str, Header()]):
+    if user_key.startswith('"') and user_key.endswith('"'):
+        user_key = user_key[1:-1]
+    database.change_user_name(user_key, name.name)
+    return {"message": "success"}
+
+@app.get("/user/me")
+async def get_user_name(user_key: Annotated[str, Header()]):
+    if user_key.startswith('"') and user_key.endswith('"'):
+        user_key = user_key[1:-1]
+    username = database.get_user_name(user_key)
+    if username is None:
+        return {"error": "User not found"}
+    else:
+        return {"name": username}
 
 @app.get("/user/export") # please update the route name to be more meaningful, e.g., /user/export_user_data
 async def export_user_data(user_key: Annotated[str, Header()]):

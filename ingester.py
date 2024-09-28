@@ -106,6 +106,7 @@ class Ingester:
                 self.db.execute("DROP TABLE IF EXISTS config")
                 self.db.execute("DROP TABLE IF EXISTS annotations")
                 self.db.execute("DROP TABLE IF EXISTS leaderboard")
+                self.db.execute("DROP TABLE IF EXISTS users")
                 self.db.commit()
 
         self.db.execute(
@@ -119,6 +120,9 @@ class Ingester:
         )
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS sample_meta (sample_id INTEGER PRIMARY KEY, json_meta TEXT)"
+        )
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, user_name TEXT)"
         )
 
         self.db.execute(

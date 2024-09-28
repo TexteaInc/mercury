@@ -331,6 +331,35 @@ class Database:
         sql_cmd = "DELETE FROM annotations WHERE annot_id = ? AND annotator = ?"
         self.db.execute(sql_cmd, (int(record_id), annotator))
         self.db.commit()
+    
+    @database_lock()
+    def add_user(self, user_id: str, user_name: str):
+        sql_cmd = "INSERT INTO users (user_id, user_name) VALUES (?, ?)"
+        self.db.execute(sql_cmd, (user_id, user_name))
+        self.db.commit()
+    
+    @database_lock()
+    def change_user_name(self, user_id: str, user_name: str):
+        sql_cmd = "UPDATE users SET user_name = ? WHERE user_id = ?"
+        self.db.execute(sql_cmd, (user_name, user_id))
+        self.db.commit()
+    
+    @database_lock()
+    def get_user_name(self, user_id: str) -> str:
+        sql_cmd = "SELECT user_name FROM users WHERE user_id = ?"
+        res = self.db.execute(sql_cmd, (user_id,))
+        user_name = res.fetchone()
+        if user_name is None:
+            return None
+        return user_name[0]
+    
+    def get_user_name_without_lock(self, user_id: str) -> str:
+        sql_cmd = "SELECT user_name FROM users WHERE user_id = ?"
+        res = self.db.execute(sql_cmd, (user_id,))
+        user_name = res.fetchone()
+        if user_name is None:
+            return None
+        return user_name[0]
 
     @database_lock()
     # def export_user_data(self, user_id: str) -> list[LabelData]:
@@ -392,7 +421,7 @@ class Database:
                 text = [t[0] for t in text]
                 full_texts[text_type] = " ".join(text)
             
-            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": json.loads(label), "note": note}
+            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": json.loads(label), "note": note, "annotator_name": self.get_user_name_without_lock(annotator)}
             # annot_spans example: {'source': (1, 10), 'summary': (7, 10)}
             annot_spans = json.loads(annot_spans)
             for text_type, (start, end) in annot_spans.items():
@@ -451,7 +480,7 @@ class Database:
                 text = [t[0] for t in text]
                 full_texts[text_type] = " ".join(text)
             
-            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": json.loads(label), "note": note}
+            result_local = {"annot_id": annot_id, "sample_id": sample_id, "annotator": annotator, "label": json.loads(label), "note": note, "annotator_name": self.get_user_name_without_lock(annotator)}
             # annot_spans example: {'source': (1, 10), 'summary': (7, 10)}
             annot_spans = json.loads(annot_spans)
             for text_type, (start, end) in annot_spans.items():

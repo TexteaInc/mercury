@@ -1,11 +1,15 @@
 "use client"
 
 import {
+  Avatar,
   Body1,
   Button,
   Card,
   CardHeader,
   Field,
+  Popover,
+  PopoverSurface,
+  PopoverTrigger,
   ProgressBar, Table, TableBody, TableCell,
   TableHeader, TableHeaderCell, TableRow,
   Text,
@@ -26,7 +30,8 @@ import {
   labelText,
   selectText,
   deleteRecord,
-  getAllLabels
+  getAllLabels,
+  changeName
 } from "../utils/request"
 import { type LabelData, type SectionResponse, type Task, userSectionResponse } from "../utils/types"
 import {
@@ -81,17 +86,17 @@ const getColor = (score: number) => {
 // Function to determine if a color is light or dark
 const isLightColor = (color: string) => {
   // Remove the hash if present
-  color = color.replace('#', '');
+  let newcolor = color.replace('#', '');
 
   // Convert 3-digit hex to 6-digit hex
-  if (color.length === 3) {
-    color = color.split('').map(char => char + char).join('');
+  if (newcolor.length === 3) {
+    newcolor = newcolor.split('').map(char => char + char).join('');
   }
 
   // Convert hex to RGB
-  const r = parseInt(color.substring(0, 2), 16);
-  const g = parseInt(color.substring(2, 4), 16);
-  const b = parseInt(color.substring(4, 6), 16);
+  const r = Number.parseInt(newcolor.substring(0, 2), 16);
+  const g = Number.parseInt(newcolor.substring(2, 4), 16);
+  const b = Number.parseInt(newcolor.substring(4, 6), 16);
 
   // Calculate luminance
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -126,6 +131,8 @@ export default function Index() {
   const [history, setHistory] = useState<LabelData[]>(null)
   const [viewingRecord, setViewingRecord] = useState<LabelData | null>(null)
   const [labels, setLabels] = useState<(string | object)[]>([])
+  const [userName, setUserName] = useState<string>("No Name")
+  const [tempUserName, setTempUserName] = useState<string>(userName)
 
   const historyColumns = [
     { columnKey: "summary", label: "Summary" },
@@ -136,6 +143,7 @@ export default function Index() {
 
   useEffect(() => {
     if (getLock.current) return
+    setUserName(localStorage.getItem("name") || "No Name")
     Promise.all([getAllTasksLength(), getAllLabels()]).then(([tasks, labels]) => {
       setMaxIndex(tasks.all)
       setLabels(labels)
@@ -447,6 +455,47 @@ export default function Index() {
         <Button icon={<ArrowExportRegular />} onClick={exportJSON}>
           Export Labels
         </Button>
+        <Popover trapFocus>
+          <PopoverTrigger disableButtonEnhancement>
+            <Button icon={<Avatar size={20} name={userName} />}>
+              {userName}
+            </Button>
+          </PopoverTrigger>
+          
+          <PopoverSurface>
+            <div>
+              <Field style={{ 
+                display: "flex",
+                flexDirection: "column",
+                gap: "1em",
+              }}
+            >
+                <Body1>
+                  <strong>Change Name</strong>
+                </Body1>
+                <input
+                  type="text"
+                  value={tempUserName}
+                  onChange={event => {
+                    setTempUserName(event.target.value)
+                  }}
+                />
+                <Button
+                  appearance="primary"
+                  onClick={() => {
+                    changeName(tempUserName).then(() => {
+                      setUserName(tempUserName)
+                    })
+                    setTempUserName(userName)
+                  }}
+                >
+                  Change
+                </Button>
+              </Field>
+            </div>
+          </PopoverSurface>
+        </Popover>
+        
         {/* <Link href="/history/" rel="noopener noreferrer" target="_blank">
           <Button icon={<HistoryRegular />}></Button>
         </Link> */}

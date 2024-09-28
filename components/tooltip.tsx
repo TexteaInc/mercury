@@ -13,7 +13,7 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react"
-import { Button, Checkbox, Text, Textarea, Title3, Subtitle2 } from "@fluentui/react-components"
+import { Button, Checkbox, Text, Textarea, Subtitle2 } from "@fluentui/react-components"
 import { useEffect, useState } from "react"
 
 

@@ -8,9 +8,39 @@ const getKey = async (): Promise<string> => {
         const response = await fetch(`${backend}/user/new`);
         const data = await response.json();
         localStorage.setItem("key", data.key);
+        localStorage.setItem("name", data.name);
         return data.key;
-  }
-  return Promise.resolve(key)
+    }
+    
+    const nameResponse = await fetch(`${backend}/user/me`, {
+        headers: {
+            "User-Key": key,
+        },
+    });
+    
+    const data = await nameResponse.json();
+    if ("error" in data) {
+        localStorage.removeItem("key");
+        localStorage.removeItem("name");
+        return getKey();
+    }
+    localStorage.setItem("name", data.name);
+    return Promise.resolve(key)
+}
+
+const changeName = async (name: string): Promise<Normal> => {
+    const key = await getKey();
+    const response = await fetch(`${backend}/user/name`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "User-Key": key,
+        },
+        body: JSON.stringify({ name }),
+    });
+    const data = await response.json();
+    localStorage.setItem("name", name);
+    return data as Normal;
 }
 
 const getAllLabels = async (): Promise<(string | object)[]> => {
@@ -91,4 +121,4 @@ const deleteRecord = async (recordId: string): Promise<Normal> => {
     return data as Normal;
 }
 
-export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, getTaskHistory, deleteRecord, getAllLabels }
+export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, getTaskHistory, deleteRecord, getAllLabels, changeName }

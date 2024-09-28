@@ -74,7 +74,8 @@ The dumped human annotations are stored in a JSON format like this:
             {
                 'annot_id': int,
                 'sample_id': int, # relative to the ingestion file
-                'annotator': str, 
+                'annotator': str,  # the annotator unique id
+                'annotator_name': str, # the annotator name
                 'label': list[str],
                 'note': str,
                 'summary_span': str, # the text span in the summary
@@ -107,7 +108,7 @@ Terminology:
 
 ### Tables 
 
-Three tables: `chunks`, `embeddings`, `annotations`, and `leaderboard`. All powered by SQLite. In particular, `embeddings` is powered by `sqlite-vec`. 
+Three tables: `chunks`, `embeddings`, `annotations`, `users` and `leaderboard`. All powered by SQLite. In particular, `embeddings` is powered by `sqlite-vec`. 
 
 #### `chunks` table: chunks and metadata
 
@@ -153,8 +154,8 @@ Meaning of select columns:
 
 | annot_id | sample _id | annot_spans                             | annotator | label      | note |
 |----------|------------|-----------------------------------------|-----------|------------|------|
-| 1        | 1          | {'source': [1, 10], 'summary': [7, 10]} | Alice     | ["ambivalent"] | "I am not sure." |
-| 2        | 1          | {'summary': [2, 8]}                     | Bob       | ["extrinsic"]  | "No connection to the source." |
+| 1        | 1          | {'source': [1, 10], 'summary': [7, 10]} | 2fe9bb69  | ["ambivalent"] | "I am not sure." |
+| 2        | 1          | {'summary': [2, 8]}                     | a24cb15c  | ["extrinsic"]  | "No connection to the source." |
 
 * `sample_id` are the `id`'s of chunks in the `chunks` table.
 * `text_spans` is a JSON text field that stores the text spans selected by the annotator. Each entry is a dictionary where keys must be those in the `text_type` column in the `chunks` table (hardcoded to  `source` and `summary` now) and the values are lists of two integers: the start and end indices of the text span in the chunk. For extrinsic hallucinations (no connection to the source at all), only `summary`-key items. The reason we use JSON here is that SQLite does not support array types.
@@ -168,7 +169,6 @@ For example:
 | embdding_model | "openai/text-embedding-3-small" |
 | embdding_dimension | 4 |
 
-
 #### `sample_meta` table: the sample metadata
 
 | sample_id | json_meta | 
@@ -177,6 +177,13 @@ For example:
 | 1         | {"model":"openai\/GPT-3.5-Turbo","HHEMv1":0.43003,"HHEM-2.1":0.97216,"HHEM-2.1-English":0.92742,"trueteacher":1,"true_nli":1.0,"gpt-3.5-turbo":1,"gpt-4-turbo":1,"gpt-4o":1, "sample_id": 1018}    |
 
 0-indexed, the `sample_id` column is the `sample_id` in the `chunks` table. It is local to the ingestion file. The `json_meta` is whatever info other than ingestion columns (source and summary) in the ingestion file.
+
+#### `users` table: the annotators
+
+| user_id                          | user_name |
+|----------------------------------|-----------|
+| add93a266ab7484abdc623ddc3bf6441 | Alice     |
+| 68d41e465458473c8ca1959614093da7 | Bob       |
 
 ### How to do vector search
 
