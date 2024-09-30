@@ -97,6 +97,8 @@ The dumped human annotations are stored in a JSON format like this:
 ]
 ```
 
+You can view exported data in `http://[your_host]/viewer`
+
 ## Technical details
 
 Terminology:
