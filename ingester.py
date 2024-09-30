@@ -19,7 +19,7 @@ def serialize_f32(vector: List[float]) -> bytes:
     return struct.pack("%sf" % len(vector), *vector)
 
 class Embedder: 
-    def __init__(self, name: Literal['bge-small-en-v1.5', 'openai', 'multi-qa-mpnet-base-dot-v1']) -> None:
+    def __init__(self, name: Literal['bge-small-en-v1.5', 'openai', 'all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1']) -> None:
         self.name = name 
         self.use_sentence_transformers = False
         if name in ['bge-small-en-v1.5']:
@@ -29,7 +29,7 @@ class Embedder:
         elif 'openai' in name:
             from openai import OpenAI
             self.model = OpenAI()
-        elif name in ['multi-qa-mpnet-base-dot-v1']:
+        elif name in ['multi-qa-mpnet-base-dot-v1', 'all-mpnet-base-v2']:
             from sentence_transformers import SentenceTransformer
             self.model = SentenceTransformer(f'sentence-transformers/{name}')
             self.use_sentence_transformers = True
@@ -221,7 +221,7 @@ if __name__ == "__main__":
         "--embedding_model_id",
         type=str,
         default="dummy",
-        help="The ID of the embedding model to use. Currently supports 'multi-qa-mpnet-base-dot-v1',  'bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}', and 'dummy' (random numbers).",
+        help="The ID of the embedding model to use. Currently supports 'all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1',  'bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}', and 'dummy' (random numbers).",
     )
     parser.add_argument(
         "--embedding_dimension",
