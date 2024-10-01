@@ -3,29 +3,44 @@ import type { AllTasksLength, LabelData, LabelRequest, Normal, SectionResponse, 
 const backend = process.env.NEXT_PUBLIC_BACKEND || "";
 
 const getKey = async (): Promise<string> => {
+    const hasUserMe = await checkUserMe();
+    
     const key = localStorage.getItem("key")
     if (key === "" || key === null) {
         const response = await fetch(`${backend}/user/new`);
         const data = await response.json();
         localStorage.setItem("key", data.key);
-        localStorage.setItem("name", data.name);
+        if (hasUserMe) {
+            localStorage.setItem("name", data.name);
+        }
         return data.key;
     }
     
-    const nameResponse = await fetch(`${backend}/user/me`, {
+    if (hasUserMe) {
+        const nameResponse = await fetch(`${backend}/user/me`, {
+            headers: {
+                "User-Key": key,
+            },
+        });
+        
+        const data = await nameResponse.json();
+        if ("error" in data) {
+            localStorage.removeItem("key");
+            localStorage.removeItem("name");
+            return getKey();
+        }
+        localStorage.setItem("name", data.name);
+        return Promise.resolve(key)
+    }   
+}
+
+const checkUserMe = async (): Promise<boolean> => {
+    const response = await fetch(`${backend}/user/me`, {
         headers: {
-            "User-Key": key,
+            "User-Key": "OK_CHECK",
         },
     });
-    
-    const data = await nameResponse.json();
-    if ("error" in data) {
-        localStorage.removeItem("key");
-        localStorage.removeItem("name");
-        return getKey();
-    }
-    localStorage.setItem("name", data.name);
-    return Promise.resolve(key)
+    return response.ok;
 }
 
 const changeName = async (name: string): Promise<Normal> => {
@@ -121,4 +136,4 @@ const deleteRecord = async (recordId: string): Promise<Normal> => {
     return data as Normal;
 }
 
-export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, getTaskHistory, deleteRecord, getAllLabels, changeName }
+export { getAllTasksLength, getSingleTask, selectText, labelText, exportLabel, getTaskHistory, deleteRecord, getAllLabels, changeName, checkUserMe }

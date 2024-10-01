@@ -31,7 +31,8 @@ import {
   selectText,
   deleteRecord,
   getAllLabels,
-  changeName
+  changeName,
+  checkUserMe
 } from "../utils/request"
 import { type LabelData, type SectionResponse, type Task, userSectionResponse } from "../utils/types"
 import {
@@ -133,6 +134,7 @@ export default function Index() {
   const [labels, setLabels] = useState<(string | object)[]>([])
   const [userName, setUserName] = useState<string>("No Name")
   const [tempUserName, setTempUserName] = useState<string>(userName)
+  const [hideName, setHideName] = useState<boolean>(true)
 
   const historyColumns = [
     { columnKey: "summary", label: "Summary" },
@@ -144,9 +146,14 @@ export default function Index() {
   useEffect(() => {
     if (getLock.current) return
     setUserName(localStorage.getItem("name") || "No Name")
-    Promise.all([getAllTasksLength(), getAllLabels()]).then(([tasks, labels]) => {
+    Promise.all([
+      getAllTasksLength(), 
+      getAllLabels(),
+      checkUserMe(),
+    ]).then(([tasks, labels, result]) => {
       setMaxIndex(tasks.all)
       setLabels(labels)
+      setHideName(!result)
       getLock.current = true
     })
   }, [])
@@ -455,46 +462,48 @@ export default function Index() {
         <Button icon={<ArrowExportRegular />} onClick={exportJSON}>
           Export Labels
         </Button>
-        <Popover trapFocus>
-          <PopoverTrigger disableButtonEnhancement>
-            <Button icon={<Avatar size={20} name={userName} />}>
-              {userName}
-            </Button>
-          </PopoverTrigger>
-          
-          <PopoverSurface>
-            <div>
-              <Field style={{ 
-                display: "flex",
-                flexDirection: "column",
-                gap: "1em",
-              }}
-            >
-                <Body1>
-                  <strong>Change Name</strong>
-                </Body1>
-                <input
-                  type="text"
-                  value={tempUserName}
-                  onChange={event => {
-                    setTempUserName(event.target.value)
-                  }}
-                />
-                <Button
-                  appearance="primary"
-                  onClick={() => {
-                    changeName(tempUserName).then(() => {
-                      setUserName(tempUserName)
-                    })
-                    setTempUserName(userName)
-                  }}
-                >
-                  Change
-                </Button>
-              </Field>
-            </div>
-          </PopoverSurface>
-        </Popover>
+        {!hideName && (
+          <Popover trapFocus>
+            <PopoverTrigger disableButtonEnhancement>
+              <Button icon={<Avatar size={20} name={userName} />}>
+                {userName}
+              </Button>
+            </PopoverTrigger>
+            
+            <PopoverSurface>
+              <div>
+                <Field style={{ 
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1em",
+                }}
+              >
+                  <Body1>
+                    <strong>Change Name</strong>
+                  </Body1>
+                  <input
+                    type="text"
+                    value={tempUserName}
+                    onChange={event => {
+                      setTempUserName(event.target.value)
+                    }}
+                  />
+                  <Button
+                    appearance="primary"
+                    onClick={() => {
+                      changeName(tempUserName).then(() => {
+                        setUserName(tempUserName)
+                      })
+                    }}
+                  >
+                    Change
+                  </Button>
+                </Field>
+              </div>
+            </PopoverSurface>
+          </Popover>
+        )}
+        
         
         {/* <Link href="/history/" rel="noopener noreferrer" target="_blank">
           <Button icon={<HistoryRegular />}></Button>
