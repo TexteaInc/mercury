@@ -274,6 +274,10 @@ async def delete_annotation(record_id: str, user_key: Annotated[str, Header()]):
 async def history():
     return FileResponse("dist/history.html")
 
+@app.get("/viewer")
+async def viewer():
+    return FileResponse("dist/viewer.html")
+
 if __name__ == "__main__":
 
     app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
