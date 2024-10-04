@@ -43,7 +43,8 @@ import {
   EyeOffRegular,
   EyeRegular,
   HandRightRegular,
-  IosChevronRightRegular
+  IosChevronRightRegular,
+  ShareRegular
 } from "@fluentui/react-icons";
 import { Allotment } from "allotment"
 import "allotment/dist/style.css"
@@ -150,12 +151,25 @@ export default function Index() {
       getAllTasksLength(), 
       getAllLabels(),
       checkUserMe(),
-    ]).then(([tasks, labels, result]) => {
-      setMaxIndex(tasks.all)
-      setLabels(labels)
-      setHideName(!result)
-      getLock.current = true
-    })
+    ])
+      .then(([tasks, labels, result]) => {
+        setMaxIndex(tasks.all)
+        setLabels(labels)
+        setHideName(!result)
+        getLock.current = true
+      })
+      .then(() => {
+        // get query of url
+        const url = new URL(window.location.href)
+        const index = url.searchParams.get("sample")
+        if (index !== null) {
+          washHand()
+          const indexNumber = Number.parseInt(index)
+          if (!Number.isNaN(indexNumber) && indexNumber >= 0 && indexNumber <= maxIndex) {
+            setLabelIndex(indexNumber)
+          }
+        }
+      })
   }, [])
 
   useEffect(() => {
@@ -202,7 +216,7 @@ export default function Index() {
       
       const mercuryElements = document.querySelectorAll("[data-mercury-disable-selection]")
       
-      console.log(mercuryElements)
+      // console.log(mercuryElements)
       
       for (const element of mercuryElements) {
         if (element.contains(target)) {
@@ -461,6 +475,13 @@ export default function Index() {
         )}
         <Button icon={<ArrowExportRegular />} onClick={exportJSON}>
           Export Labels
+        </Button>
+        <Button icon={<ShareRegular />} onClick={() => {
+          navigator.clipboard.writeText(
+            `${window.location.origin}${window.location.pathname}?sample=${labelIndex}`
+          )
+        }}>
+          Share Link
         </Button>
         {!hideName && (
           <Popover trapFocus>
