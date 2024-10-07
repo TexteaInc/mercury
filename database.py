@@ -506,9 +506,24 @@ class Database:
 
         # add metadata to each dict in results_nested
         new_results_nested = []
+        annotated_sample_ids = set()
         for result in results_nested:
             sample_id = result["sample_id"]
             new_results_nested.append(result | sample_meta_dict[sample_id])
+            annotated_sample_ids.add(sample_id)
+        for sample_id in sample_meta_dict:
+            if sample_id not in annotated_sample_ids:
+                full_texts = {}
+                for text_type in ["source", "summary"]:
+                    sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
+                    res = self.db.execute(sql_cmd, (sample_id, text_type))
+                    text = res.fetchall() # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
+                    text = [t[0] for t in text]
+                    full_texts[text_type] = " ".join(text)
+                sample_dict = {"sample_id": sample_id, "source": full_texts["source"], "summary": full_texts["summary"], "annotations": []}
+                sample_dict.update(sample_meta_dict[sample_id])
+                new_results_nested.append(sample_dict)
+        
         results_nested = new_results_nested
 
         with open(dump_file, "w") as f:
