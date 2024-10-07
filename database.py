@@ -525,6 +525,7 @@ class Database:
                 new_results_nested.append(sample_dict)
         
         results_nested = new_results_nested
+        results_nested = sorted(results_nested, key=lambda d: d['sample_id'])
 
         with open(dump_file, "w") as f:
             json.dump(results_nested, f, indent=2, ensure_ascii=False)
