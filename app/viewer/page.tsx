@@ -135,14 +135,22 @@ export default function Page() {
     if (fullSlices === null || fullSlices.length <= 0) {
       return
     }
-    
+
+    // Filter out samples with empty annotations
+    const filteredSlices = fullSlices.filter(slice => slice.annotations.length > 0)
+
     if (filterUsers === null || filterUsers.length <= 0) {
-      setNowSlices(fullSlices)
+      // setNowSlices(fullSlices)
+      setNowSlices(filteredSlices)
+      setMaxSample(filteredSlices.length)
+      setSampleIndex(0)
+      setAnnotationIndex(0)
       return
     }
     
     const newSlices: DumpSlice[] = []
-    for (const slice of fullSlices) {
+    // for (const slice of fullSlices) {
+      for (const slice of filteredSlices) {
       const annotations = slice.annotations.filter((annotation) => filterUsers.includes(annotation.annotator))
       if (annotations.length > 0) {
         newSlices.push({
@@ -153,7 +161,8 @@ export default function Page() {
     }
     
     setMaxSample(newSlices.length)
-    setMaxAnnotation(newSlices[0].annotations.length)
+    // setMaxAnnotation(newSlices[0].annotations.length)
+    setMaxAnnotation(newSlices[0]?.annotations.length || 0)
     setSampleIndex(0)
     setAnnotationIndex(0)
     setNowSlices(newSlices)
