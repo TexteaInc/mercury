@@ -351,7 +351,8 @@ export default function Page() {
           Previous sample
         </Button>
         <Field 
-          validationMessage={`Sample ${sampleIndex + 1} / ${maxSample}, ID: ${currentSlice ? currentSlice.sample_id : "N/A"}`} 
+          //  validationMessage={`Sample ${sampleIndex + 1} / ${maxSample}, ID in current batch: ${currentSlice ? currentSlice.sample_id + 1 : "N/A"}`} 
+          validationMessage={`Sample ID in current batch: ${currentSlice ? currentSlice.sample_id + 1 : "N/A"}`} 
           // validationMessage={`Sample ${currentSlice.sample_id + 1} in current batch`} 
           // TODO: Please fix above 
           validationState="none"
@@ -403,7 +404,8 @@ export default function Page() {
           Previous annotation
         </Button>
         <Field
-          validationMessage={`Annotation ${annotationIndex + 1} / ${maxAnnotation}, ID: ${currentSlice ? currentSlice.annotation.annot_id : "N/A"}`}
+          // validationMessage={`Annotation ${annotationIndex + 1} / ${maxAnnotation}, ID: ${currentSlice ? currentSlice.annotation.annot_id : "N/A"}`}
+          validationMessage={`Annotation ${annotationIndex + 1} / ${maxAnnotation} `}
           validationState="none"
           style={{
             flexGrow: 1
