@@ -175,6 +175,10 @@ export default function Page() {
         <table className={styles.propsTable}>
           <tbody>
             <tr>
+              <td>Sample ID</td>
+              <td>{props.sample_id + 1} (in current batch)</td>
+            </tr>
+            <tr>
               <td>Annotator</td>
               <td>{annotator}</td>
             </tr>
@@ -190,10 +194,6 @@ export default function Page() {
                 <td>{props.annotation.note}</td>
               </tr>
             )}
-            <tr>
-              <td>Sample ID</td>
-              <td>{props.annotation.sample_id}</td>
-            </tr>
             <tr>
               <td>Annot ID</td>
               <td>{props.annotation.annot_id}</td>
@@ -352,6 +352,8 @@ export default function Page() {
         </Button>
         <Field 
           validationMessage={`Sample ${sampleIndex + 1} / ${maxSample}`} 
+          // validationMessage={`Sample ${currentSlice.sample_id + 1} in current batch`} 
+          // TODO: Please fix above 
           validationState="none"
           style={{
             flexGrow: 1
