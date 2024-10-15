@@ -244,6 +244,7 @@ export default function Page() {
               }
               const text = await file.text()
               const slice: DumpSlice[] = JSON.parse(text)
+                .filter((slice: DumpSlice) => slice.annotations.length > 0)
               setFilterUsers([])
               setUsers(makeUsers(slice))
               setFullSlices(slice)
