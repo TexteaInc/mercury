@@ -180,7 +180,12 @@ export default function Page() {
             </tr>
             <tr>
               <td>Annotator</td>
-              <td>{annotator}</td>
+              <td>{annotator} <Button onClick={() => {
+                localStorage.setItem("key", props.annotation.annotator);
+                setTimeout(() => {
+                  window.location.reload()
+                }, 500)
+              }}>Switch To This User</Button></td>
             </tr>
             <tr>
               <td>Labels</td>
