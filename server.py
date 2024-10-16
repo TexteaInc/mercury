@@ -269,6 +269,9 @@ async def delete_annotation(record_id: str, user_key: Annotated[str, Header()]):
     database.delete_annotation(record_id, user_key)
     return {"message": f"delete anntation {record_id} success"}
 
+@app.get("/labels")
+async def get_labels():
+    return database.dump_annotation(dump_file=None)
 
 @app.get("/history")  # redirect route to history.html
 async def history():

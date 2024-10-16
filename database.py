@@ -461,7 +461,7 @@ class Database:
     # def dump_all_data(
     def dump_annotation(
             self,
-            dump_file: str = "mercury_annotations.json",
+            dump_file: str | None = "mercury_annotations.json",
             # source_corpus_id: int | None = None,
             # summary_corpus_id: int | None = None,
     ):
@@ -526,7 +526,9 @@ class Database:
         
         results_nested = new_results_nested
         results_nested = sorted(results_nested, key=lambda d: d['sample_id'])
-
+        
+        if dump_file is None:
+            return results_nested
         with open(dump_file, "w") as f:
             json.dump(results_nested, f, indent=2, ensure_ascii=False)
             #TODO add JSONL support. Automatically detect file format based on filename extension

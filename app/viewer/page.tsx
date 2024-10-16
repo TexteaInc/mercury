@@ -3,7 +3,7 @@
 import { Body1, Button, Card, CardHeader, Dialog, DialogBody, DialogSurface, DialogTitle, DialogTrigger, Dropdown, Field, makeStyles, MessageBar, MessageBarBody, MessageBarTitle, Persona, ProgressBar, Option, Tag, TagGroup, Text, Title1, tokens, DialogContent, DialogActions } from "@fluentui/react-components";
 import { ArrowLeftRegular, ArrowRightRegular, ArrowUploadRegular, DocumentArrowLeftRegular, DocumentArrowRightRegular, FilterRegular } from "@fluentui/react-icons";
 import { Allotment } from "allotment";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "allotment/dist/style.css";
 
 type Annotation = {
@@ -114,7 +114,32 @@ export default function Page() {
   const [nowSlices, setNowSlices] = useState<DumpSlice[] | null>(null)
   const [filterUsers, setFilterUsers] = useState<string[]>([])
   const [users, setUsers] = useState<Users | null>(null)
+  const fetchLock = useRef(false)
   const styles = useStyles();
+  
+  useEffect(() => {
+    if (fetchLock.current) {
+      return
+    }
+    fetchLock.current = true
+    fetch("/labels")
+      .then((data) => data.json())
+      .then((data) => {
+        const slice: DumpSlice[] = data.filter((slice: DumpSlice) => slice.annotations.length > 0)
+        setFilterUsers([])
+        setUsers(makeUsers(data))
+        setFullSlices(data)
+        setNowSlices(data)
+        setMaxSample(data.length)
+        setMaxAnnotation(slice[0].annotations.length)
+        setSampleIndex(0)
+        setAnnotationIndex(0)
+      })
+      .catch((error) => {
+        console.error(error)
+        console.log("--- Failed to fetch labels, upload a json file to start.")
+      })
+  }, [])
   
   useEffect(() => {
     if (nowSlices === null || nowSlices.length <= 0) {
