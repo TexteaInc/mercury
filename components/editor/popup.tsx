@@ -296,7 +296,8 @@ const PopupEditor = (props: PopupEditorProps) => {
             <Textarea
               resize="both"
               style={{
-                width: "25vw",
+                width: "40vw",
+                minHeight: "5rem"
               }}
               placeholder="Add an optional note"
               value={popUpStore.note}
