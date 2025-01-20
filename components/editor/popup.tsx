@@ -44,7 +44,7 @@ const useStyles = makeStyles({
     }
   },
   largeSurface: {
-    maxWidth: "80vw",
+    maxWidth: "98vw",
   }
 })
 
@@ -193,7 +193,7 @@ const PopupEditor = (props: PopupEditorProps) => {
                   }}
                   appearance="primary"
                 >
-                  Submit
+                  Save
                 </Button>
               </div>
             }
@@ -221,7 +221,7 @@ const PopupEditor = (props: PopupEditorProps) => {
                         popUpStore.setSourceSelectionRange([-1, -1])
                       }}
                     >
-                      Delete highlight
+                      Clear highlight
                     </Button>
                   }
                 />
@@ -255,7 +255,7 @@ const PopupEditor = (props: PopupEditorProps) => {
                             popUpStore.setSummarySelectionRange([-1, -1])
                           }}
                       >
-                          Delete highlight
+                          Clear highlight
                       </Button>
                   }
                 />
@@ -278,7 +278,7 @@ const PopupEditor = (props: PopupEditorProps) => {
             </div>
           </DialogContent>
 
-          <DialogActions position="end">
+          <DialogActions position="start">
             <CustomOption
               labels={props.labels}
               syncLabels={(labels) => {
@@ -290,6 +290,9 @@ const PopupEditor = (props: PopupEditorProps) => {
               }}
               key={forceUpdateKey}
             />
+          </DialogActions>
+
+          <DialogActions position="end">
             <Textarea
               resize="both"
               style={{
