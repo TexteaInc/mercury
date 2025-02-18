@@ -2,6 +2,7 @@ import type { SelectionRequest } from "@/utils/types"
 import { Window } from "@/components/ui/window"
 import { useTrackedEditorStore } from "@/store/useEditorStore"
 import { generateUserColor, getServerColor } from "@/utils/color"
+import { IconLoader } from "@tabler/icons-react"
 import rangy from "rangy"
 import { useCallback, useImperativeHandle, useMemo, useState } from "react"
 import Highlight from "./highlight"
@@ -131,7 +132,14 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
 
   return (
     <Window name={docType === "summary" ? "Summary" : "Source"}>
-      <Highlight text={text} highlights={highlights} onMouseUp={handleMouseUp} id={docType} pending={pending} clickable={type === "editing"} onClick={handleClick} />
+      <div className="relative w-full h-full">
+        {pending && (
+          <div className="flex justify-center items-center absolute inset-0 z-10">
+            <IconLoader className="animate-spin" />
+          </div>
+        )}
+        <Highlight text={text} highlights={highlights} onMouseUp={handleMouseUp} id={docType} pending={pending} clickable={type === "editing"} onClick={handleClick} />
+      </div>
     </Window>
   )
 }
