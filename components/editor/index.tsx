@@ -1,4 +1,4 @@
-import type { CommentData, LabelRequest, SelectionRequest } from "@/utils/types"
+import type { Comment, CommentData, LabelRequest, SelectionRequest } from "@/utils/types"
 import type { EditorPanelRef } from "./panel"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { useToast } from "@/hooks/use-toast"
@@ -6,9 +6,8 @@ import { useTrackedEditorStore } from "@/store/useEditorStore"
 import { useTrackedIndexStore } from "@/store/useIndexStore"
 import { useTrackedTaskStore } from "@/store/useTaskStore"
 import { useTrackedUserStore } from "@/store/useUserStore"
-import { commitComment, deleteLabel, labelText, patchComment, selectText } from "@/utils/request"
+import { commitComment, deleteLabel, getComment, labelText, patchComment, selectText } from "@/utils/request"
 import { isRequestError } from "@/utils/types"
-import { IconLoader } from "@tabler/icons-react"
 import { produce } from "immer"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import BottomBar from "../bottombar"
@@ -41,6 +40,7 @@ export default function Editor() {
     sourceSelection: null,
     summarySelection: null,
   })
+  const [comments, setComments] = useState<Comment[]>([])
 
   const initialNote = useMemo(() => {
     if (editorStore.viewing) {
@@ -56,20 +56,28 @@ export default function Editor() {
     return []
   }, [editorStore.viewing, editorStore.history])
 
-  const comments = useMemo(() => {
-    if (editorStore.viewing) {
-      return [] // TODO: get comments
+  async function fetchComments() {
+    if (!editorStore.viewing) {
+      return
     }
-    return []
+    try {
+      const response = await getComment(editorStore.viewing.record_id)
+      setComments(response)
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Uh oh! Something went wrong.",
+        description: `There was a problem fetching comments.: ${error}`,
+      })
+    }
+  }
+
+  useEffect(() => {
+    fetchComments()
   }, [editorStore.viewing])
 
   async function handleSubmitComment(comment: CommentData) {
     if (!editorStore.viewing) {
-      toast({
-        variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: "There was a problem with your request.",
-      })
       return
     }
     try {
@@ -78,6 +86,7 @@ export default function Editor() {
         title: "Comment submitted",
         description: "Your comment has been submitted",
       })
+      await fetchComments()
     } catch (error) {
       toast({
         variant: "destructive",
@@ -102,6 +111,7 @@ export default function Editor() {
         title: "Comment updated",
         description: "Your comment has been updated",
       })
+      await fetchComments()
     } catch (error) {
       toast({
         variant: "destructive",

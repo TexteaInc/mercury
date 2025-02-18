@@ -20,7 +20,7 @@ interface BottomBarProps {
   onEditMessage: (id: number, comment: CommentData) => void
 }
 
-export default function BottomBar({ initialConsistent, initialNote, onConsistentChange, onNoteChange, onSubmitLabel, onDelete, onReset, type, comments, onSubmitChat, onEditMessage: onEdit }: BottomBarProps) {
+export default function BottomBar({ initialConsistent, initialNote, onConsistentChange, onNoteChange, onSubmitLabel, onDelete, onReset, type, comments, onSubmitChat, onEditMessage }: BottomBarProps) {
   const editorStore = useTrackedEditorStore()
   return (
     <ResizablePanelGroup direction="horizontal" className="border border-slate-200">
@@ -37,7 +37,7 @@ export default function BottomBar({ initialConsistent, initialNote, onConsistent
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={30}>
-        <Chat labelId={editorStore.viewing?.record_id} comments={comments} onSubmit={onSubmitChat} onEdit={onEdit} disabled={type === "editing"} />
+        <Chat labelId={editorStore.viewing?.record_id} comments={comments} onSubmit={onSubmitChat} onEdit={onEditMessage} disabled={type === "editing"} />
       </ResizablePanel>
     </ResizablePanelGroup>
   )
