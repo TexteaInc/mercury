@@ -23,8 +23,8 @@ export default function Entry({ username, hslColor: color, onStateChange, onSele
         <div className="size-6 rounded-sm" style={{ backgroundColor: color }} onClick={() => onSelect(true)} />
         <p>{username}</p>
       </div>
-      <Button variant="ghost" size="icon" onClick={() => handleStateChange(!active)}>
-        {active ? <IconEye /> : <IconEyeOff />}
+      <Button variant="outline" size="icon" onClick={() => handleStateChange(!active)} className="shadow-none">
+        {active ? "Hide" : "Show"}
       </Button>
     </div>
   )
