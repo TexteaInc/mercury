@@ -8,6 +8,7 @@ import { useTrackedTaskStore } from "@/store/useTaskStore"
 import { useTrackedUserStore } from "@/store/useUserStore"
 import { commitComment, deleteLabel, labelText, patchComment, selectText } from "@/utils/request"
 import { isRequestError } from "@/utils/types"
+import { IconLoader } from "@tabler/icons-react"
 import { produce } from "immer"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import BottomBar from "../bottombar"
@@ -266,19 +267,29 @@ export default function Editor() {
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={25}>
-        <BottomBar
-          initialNote={initialNote}
-          initialConsistent={initialConsistent}
-          type={type}
-          onConsistentChange={setConsistent}
-          onNoteChange={setNote}
-          onSubmitChat={handleSubmitComment}
-          onEditMessage={handleEditComment}
-          comments={comments}
-          onDelete={handleDeleteLabel}
-          onReset={handleResetLabel}
-          onSubmitLabel={handleSubmitLabel}
-        />
+        <div className="relative w-full h-full">
+          {(!editorStore.viewing && !selection.sourceSelection && !selection.summarySelection)
+            ? (
+                <div className="flex justify-center items-center absolute inset-0 z-10 bg-white">
+                  Please select a span or click a label on sidebar to view it
+                </div>
+              )
+            : (
+                <BottomBar
+                  initialNote={initialNote}
+                  initialConsistent={initialConsistent}
+                  type={type}
+                  onConsistentChange={setConsistent}
+                  onNoteChange={setNote}
+                  onSubmitChat={handleSubmitComment}
+                  onEditMessage={handleEditComment}
+                  comments={comments}
+                  onDelete={handleDeleteLabel}
+                  onReset={handleResetLabel}
+                  onSubmitLabel={handleSubmitLabel}
+                />
+              )}
+        </div>
       </ResizablePanel>
     </ResizablePanelGroup>
   )

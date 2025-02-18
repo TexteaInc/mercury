@@ -22,9 +22,9 @@ export default function Actions({ onSubmit, onDelete, onReset, type }: ActionsPr
   return (
     <Window name="Actions">
       <div className="flex gap-2">
+        <Button onClick={onReset} variant="outline">Reset</Button>
         {type === "editing" && (
           <>
-            <Button onClick={onReset} variant="outline">Reset</Button>
             <Button onClick={onSubmit} variant="outline">Submit</Button>
           </>
         )}
