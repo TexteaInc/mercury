@@ -4,9 +4,9 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { useToast } from "@/hooks/use-toast"
 import { useTrackedEditorStore } from "@/store/useEditorStore"
 import { useTrackedIndexStore } from "@/store/useIndexStore"
-import { useTrackedTaskStore } from "@/store/useTaskStore"
+import { useTaskStore } from "@/store/useTaskStore"
 import { useTrackedUserStore } from "@/store/useUserStore"
-import { commitComment, deleteLabel, getComment, labelText, patchComment, selectText } from "@/utils/request"
+import { commitComment, deleteLabel, getComment, labelText, patchComment, patchLabel, selectText } from "@/utils/request"
 import { isRequestError } from "@/utils/types"
 import { produce } from "immer"
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
@@ -14,7 +14,7 @@ import BottomBar from "../bottombar"
 import EditorPanel from "./panel"
 
 export default function Editor() {
-  const taskStore = useTrackedTaskStore()
+  const taskStore = useTaskStore()
   const editorStore = useTrackedEditorStore()
   const userStore = useTrackedUserStore()
   const indexStore = useTrackedIndexStore()
@@ -50,11 +50,16 @@ export default function Editor() {
   }, [editorStore.viewing])
 
   const initialConsistent = useMemo(() => {
+    if (editorStore.editing) {
+      if (editorStore.viewing === editorStore.editing) {
+        return editorStore.viewing.consistent
+      }
+    }
     if (editorStore.viewing) {
       return editorStore.viewing.consistent
     }
     return []
-  }, [editorStore.viewing, editorStore.history])
+  }, [editorStore.viewing, editorStore.history, editorStore.editing])
 
   async function fetchComments() {
     if (!editorStore.viewing) {
@@ -172,12 +177,17 @@ export default function Editor() {
       summary_end: summarySelection?.end ?? -1,
       source_start: sourceSelection?.start ?? -1,
       source_end: sourceSelection?.end ?? -1,
-      consistent,
+      consistent: consistent,
       note,
     }
 
     try {
-      await labelText(userStore.accessToken, indexStore.index, labelRequest)
+      if (editorStore.editing) {
+        await patchLabel(userStore.accessToken, indexStore.index, editorStore.editing.record_id, labelRequest)
+        editorStore.setEditing(null)
+      } else {
+        await labelText(userStore.accessToken, indexStore.index, labelRequest)
+      }
       handleResetLabel()
       editorStore.fetchHistory(userStore.accessToken, indexStore.index).catch((e) => {
         console.warn(e)
@@ -248,6 +258,25 @@ export default function Editor() {
     }
   }, [selection, indexStore.index])
 
+  const handleEditLabel = useCallback(() => {
+    if (!editorStore.viewing) {
+      return
+    }
+
+    editorStore.setEditing(editorStore.viewing)
+    editorStore.setViewing(null)
+    sourceRef.current?.setSelection({
+      start: editorStore.viewing.source_start,
+      end: editorStore.viewing.source_end,
+      from_summary: false
+    })
+    summaryRef.current?.setSelection({
+      start: editorStore.viewing.summary_start,
+      end: editorStore.viewing.summary_end,
+      from_summary: true
+    })
+  }, [editorStore.viewing])
+
   return (
     <ResizablePanelGroup direction="vertical">
       <ResizablePanel defaultSize={75}>
@@ -294,8 +323,9 @@ export default function Editor() {
                   onSubmitChat={handleSubmitComment}
                   onEditMessage={handleEditComment}
                   comments={comments}
-                  onDelete={handleDeleteLabel}
-                  onReset={handleResetLabel}
+                  onDeleteLabel={handleDeleteLabel}
+                  onResetEditor={handleResetLabel}
+                  onEditLabel={handleEditLabel}
                   onSubmitLabel={handleSubmitLabel}
                 />
               )}

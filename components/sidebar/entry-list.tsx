@@ -1,9 +1,9 @@
-import { useTrackedEditorStore } from "@/store/useEditorStore"
+import { useEditorStore } from "@/store/useEditorStore"
 import { generateUserColor } from "@/utils/color"
 import Entry from "./entry"
 
 export default function EntryList() {
-  const editorStore = useTrackedEditorStore()
+  const editorStore = useEditorStore()
 
   function handleStateChange(recordId: number, active: boolean) {
     editorStore.setActive(recordId, active)

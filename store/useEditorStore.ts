@@ -16,6 +16,8 @@ interface EditorState {
 
   viewing: LabelData | null
   setViewing: (viewing: LabelData | null) => void
+  editing: LabelData | null
+  setEditing: (editing: LabelData | null) => void
 
   activeList: Record<number, boolean>
   setActive: (recordId: number, active: boolean) => void
@@ -45,6 +47,8 @@ export const useEditorStore = create<EditorState>()(set => ({
 
   viewing: null,
   setViewing: (viewing: LabelData | null) => set({ viewing }),
+  editing: null,
+  setEditing: (editing: LabelData | null) => set({ editing }),
 
   activeList: {},
   setActive: (recordId: number, active: boolean) => set(produce((state: EditorState) => {

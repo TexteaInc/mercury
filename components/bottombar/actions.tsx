@@ -8,14 +8,15 @@ interface ActionsProps {
   onSubmit: () => void
   onDelete: () => void
   onReset: () => void
+  onEdit: () => void
   type: "editing" | "viewing"
 }
 
-export default function Actions({ onSubmit, onDelete, onReset, type }: ActionsProps) {
+export default function Actions({ onSubmit, onDelete, onReset, onEdit, type }: ActionsProps) {
   const editorStore = useTrackedEditorStore()
   const userStore = useTrackedUserStore()
 
-  const deletable = useMemo(() => {
+  const editable = useMemo(() => {
     return editorStore.viewing?.user_id === userStore.user.id
   }, [editorStore.viewing, userStore.user])
 
@@ -30,7 +31,8 @@ export default function Actions({ onSubmit, onDelete, onReset, type }: ActionsPr
         )}
         {type === "viewing" && (
           <>
-            <Button onClick={onDelete} variant="destructive" disabled={!deletable}>Delete</Button>
+            <Button onClick={onEdit} variant="outline" disabled={!editable}>Edit</Button>
+            <Button onClick={onDelete} variant="destructive" disabled={!editable}>Delete</Button>
           </>
         )}
       </div>

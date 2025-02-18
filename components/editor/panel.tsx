@@ -18,6 +18,7 @@ interface EditorPanelProps {
 }
 
 export interface EditorPanelRef {
+  setSelection: (selection: SelectionRequest | null) => void
   reset: () => void
 }
 
@@ -36,6 +37,7 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
     const range = rangySelection.getRangeAt(0)
 
     if (range.toString().trim() === "") {
+      setSelection(null)
       return
     }
 
@@ -66,15 +68,15 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
   }, [docType, type, onSelectionChange])
 
   const highlights = useMemo(() => {
-    if (pending) {
-      return []
-    }
     if (selection !== null) {
       return [{
         start: selection.start,
         end: selection.end,
         color: "hsl(204.92, 94.2%, 72.94%)",
       }]
+    }
+    if (pending || editorStore.editing) {
+      return []
     }
     if (editorStore.serverSection.length > 0) {
       return editorStore.serverSection
@@ -123,6 +125,10 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
 
   useImperativeHandle(ref, () => {
     return {
+      setSelection: (selection: SelectionRequest | null) => {
+        setSelection(selection)
+        onSelectionChange(selection)
+      },
       reset: () => {
         setSelection(null)
         onSelectionChange(null)

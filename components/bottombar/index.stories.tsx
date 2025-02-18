@@ -85,8 +85,8 @@ const meta: Meta<typeof BottomBar> = {
   ],
   args: {
     onSubmitLabel: fn(),
-    onDelete: fn(),
-    onReset: fn(),
+    onDeleteLabel: fn(),
+    onResetEditor: fn(),
     onSubmitChat: fn(),
     onEditMessage: fn(),
   },

@@ -12,15 +12,16 @@ interface BottomBarProps {
   initialNote?: string
   onConsistentChange: (result: Array<string>) => void
   onNoteChange: (note: string) => void
-  onDelete: () => void
-  onReset: () => void
+  onDeleteLabel: () => void
+  onEditLabel: () => void
+  onResetEditor: () => void
   onSubmitLabel: () => void
   comments: Array<Comment>
   onSubmitChat: (comment: CommentData) => void
   onEditMessage: (id: number, comment: CommentData) => void
 }
 
-export default function BottomBar({ initialConsistent, initialNote, onConsistentChange, onNoteChange, onSubmitLabel, onDelete, onReset, type, comments, onSubmitChat, onEditMessage }: BottomBarProps) {
+export default function BottomBar({ initialConsistent, initialNote, onConsistentChange, onNoteChange, onSubmitLabel, onDeleteLabel, onResetEditor, type, comments, onSubmitChat, onEditMessage, onEditLabel }: BottomBarProps) {
   const editorStore = useTrackedEditorStore()
   return (
     <ResizablePanelGroup direction="horizontal" className="border border-slate-200">
@@ -33,7 +34,7 @@ export default function BottomBar({ initialConsistent, initialNote, onConsistent
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={20}>
-        <Actions onSubmit={onSubmitLabel} onDelete={onDelete} onReset={onReset} type={type} />
+        <Actions onSubmit={onSubmitLabel} onDelete={onDeleteLabel} onReset={onResetEditor} onEdit={onEditLabel} type={type} />
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={30}>

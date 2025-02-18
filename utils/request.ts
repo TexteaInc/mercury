@@ -137,7 +137,7 @@ async function login(email: string, password: string): Promise<string | null> {
   return null
 }
 
-async function updateRecord(access_token: string, taskIndex: number, recordId: string, labelData: LabelData): Promise<Normal> {
+async function patchLabel(access_token: string, taskIndex: number, recordId: number, labelData: LabelRequest): Promise<Normal> {
   const response = await fetch(`${backend}/task/${taskIndex}/label/${recordId}`, {
     method: "PATCH",
     headers: {
@@ -209,6 +209,6 @@ export {
   labelText,
   login,
   patchComment,
+  patchLabel,
   selectText,
-  updateRecord,
 }
