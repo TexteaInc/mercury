@@ -177,7 +177,7 @@ export default function Editor() {
       summary_end: summarySelection?.end ?? -1,
       source_start: sourceSelection?.start ?? -1,
       source_end: sourceSelection?.end ?? -1,
-      consistent: consistent,
+      consistent,
       note,
     }
 
@@ -268,12 +268,12 @@ export default function Editor() {
     sourceRef.current?.setSelection({
       start: editorStore.viewing.source_start,
       end: editorStore.viewing.source_end,
-      from_summary: false
+      from_summary: false,
     })
     summaryRef.current?.setSelection({
       start: editorStore.viewing.summary_start,
       end: editorStore.viewing.summary_end,
-      from_summary: true
+      from_summary: true,
     })
   }, [editorStore.viewing])
 
