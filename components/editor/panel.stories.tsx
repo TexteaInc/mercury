@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react"
 
-import { EditorPanel } from "./panel"
+import EditorPanel from "./panel"
 
 const meta: Meta<typeof EditorPanel> = {
   component: EditorPanel,
