@@ -320,13 +320,14 @@ export default function Editor() {
                   type={type}
                   onConsistentChange={setConsistent}
                   onNoteChange={setNote}
-                  onSubmitChat={handleSubmitComment}
+                  onSubmitMessage={handleSubmitComment}
                   onEditMessage={handleEditComment}
                   comments={comments}
                   onDeleteLabel={handleDeleteLabel}
                   onResetEditor={handleResetLabel}
                   onEditLabel={handleEditLabel}
                   onSubmitLabel={handleSubmitLabel}
+                  onRefreshMessage={fetchComments}
                 />
               )}
         </div>

@@ -38,7 +38,7 @@ function BottomBarWithState(args: any) {
   return (
     <div>
       <div className="h-64">
-        <BottomBar {...args} onConsistentChange={setLabelData} onNoteChange={setNoteData} onSubmitChat={onSubmitChat} onEditMessage={onEdit} labelId={1} comments={comments} />
+        <BottomBar {...args} onConsistentChange={setLabelData} onNoteChange={setNoteData} onSubmitMessage={onSubmitChat} onEditMessage={onEdit} labelId={1} comments={comments} />
       </div>
       <div className="mt-4">
         <h3>Selected Labels:</h3>
@@ -87,7 +87,7 @@ const meta: Meta<typeof BottomBar> = {
     onSubmitLabel: fn(),
     onDeleteLabel: fn(),
     onResetEditor: fn(),
-    onSubmitChat: fn(),
+    onSubmitMessage: fn(),
     onEditMessage: fn(),
   },
 }

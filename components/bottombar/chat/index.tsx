@@ -1,4 +1,5 @@
 import type { Comment, CommentData } from "@/utils/types"
+import { Button } from "@/components/ui/button"
 import { Window } from "@/components/ui/window"
 import { useTrackedUserStore } from "@/store/useUserStore"
 import { useState } from "react"
@@ -10,10 +11,11 @@ interface ChatProps {
   comments: Comment[]
   onSubmit: (comments: CommentData) => void
   onEdit: (id: number, comment: CommentData) => void
+  onRefresh: () => void
   disabled?: boolean
 }
 
-export default function Chat({ labelId, comments, onSubmit, onEdit, disabled = false }: ChatProps) {
+export default function Chat({ labelId, comments, onSubmit, onEdit, onRefresh, disabled = false }: ChatProps) {
   const [newComment, setNewComment] = useState("")
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editText, setEditText] = useState("")
@@ -55,7 +57,7 @@ export default function Chat({ labelId, comments, onSubmit, onEdit, disabled = f
   }
 
   return (
-    <Window name="Chat">
+    <Window name="Chat" action={<Button onClick={onRefresh} variant="ghost">Refresh</Button>}>
       <div className="w-full flex flex-col bg-background h-full">
         <div className="flex-1 overflow-y-auto h-full">
           <CommentList

@@ -13,5 +13,6 @@ export const Primary: Story = {
   args: {
     name: "Window",
     children: <div>Hello</div>,
+    action: <div>Action Button</div>,
   },
 }
