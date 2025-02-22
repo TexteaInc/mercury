@@ -158,6 +158,7 @@ export default function Editor() {
     summaryRef.current?.reset()
     editorStore.clearServerSection()
     editorStore.setViewing(null)
+    editorStore.setEditing(null)
   }
 
   const handleSubmitLabel = useCallback(async () => {
