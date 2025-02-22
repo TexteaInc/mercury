@@ -224,13 +224,6 @@ export default function Editor() {
           description: "There was a problem with your request.",
         })
       })
-      editorStore.fetchHistory(userStore.accessToken, indexStore.index).catch((e) => {
-        console.warn(e)
-        toast({
-          title: "Uh oh! Something went wrong.",
-          description: "There was a problem with your request.",
-        })
-      })
       handleResetLabel()
     }
   }, [indexStore.index, userStore.accessToken])
