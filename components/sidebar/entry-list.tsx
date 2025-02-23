@@ -1,10 +1,10 @@
 import { useEditorStore } from "@/store/useEditorStore"
+import { useTrackedUserStore } from "@/store/useUserStore"
 import { generateUserColor } from "@/utils/color"
 import { useEffect, useMemo, useState } from "react"
 import { Label } from "../ui/label"
 import { Switch } from "../ui/switch"
 import Entry from "./entry"
-import { useTrackedUserStore } from "@/store/useUserStore"
 
 export default function EntryList() {
   const editorStore = useEditorStore()
