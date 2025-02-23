@@ -159,6 +159,7 @@ export default function Editor() {
     editorStore.clearServerSection()
     editorStore.setViewing(null)
     editorStore.setEditing(null)
+    setComments([])
   }
 
   const handleSubmitLabel = useCallback(async () => {
