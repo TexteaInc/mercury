@@ -22,7 +22,3 @@ export default function RootLayout({ children }) {
     </html>
   )
 }
-
-// export default dynamic(() => Promise.resolve(RootLayout), {
-//   ssr: false,
-// })

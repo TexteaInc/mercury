@@ -9,16 +9,15 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect } from "react"
 import { useTrackedIndexStore } from "../store/useIndexStore"
 import { useTrackedLabelsStore } from "../store/useLabelsStore"
-import { useTrackedUserStore } from "../store/useUserStore"
+import { useUserStore } from "../store/useUserStore"
 import { checkUserMe } from "../utils/request"
 
 let didInit = false
-let didLogin = false
 
 function Page() {
   const indexStore = useTrackedIndexStore()
   const labelsStore = useTrackedLabelsStore()
-  const userStore = useTrackedUserStore()
+  const userStore = useUserStore()
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -59,8 +58,7 @@ function Page() {
   }, [])
 
   useEffect(() => {
-    if (window !== undefined && userStore.user.name !== undefined && !didLogin) {
-      didLogin = true
+    if (window !== undefined && userStore.user.name === undefined) {
       if (userStore.accessToken === "") {
         toast({
           title: "Not logged in",
@@ -87,7 +85,7 @@ function Page() {
         })
       })
     }
-  }, [userStore.user.name])
+  }, [userStore.user])
 
   return (
     <div className="h-svh w-svw flex flex-col">
