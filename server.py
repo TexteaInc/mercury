@@ -433,7 +433,7 @@ async def viewer():
 
 
 @app.get("/login")
-async def login():
+async def login_page():
     return FileResponse("dist/login.html")
 
 
