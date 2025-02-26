@@ -438,7 +438,8 @@ async def login_page():
 
 
 if __name__ == "__main__":
-    app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
+    if os.path.exists("dist"):
+        app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
 
     import argparse
 
