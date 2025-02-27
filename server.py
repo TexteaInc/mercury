@@ -444,8 +444,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--mercury_db", type=str, required=True, default="./mercury.sqlite")
-    parser.add_argument("--user_db", type=str, required=True, default="./user.sqlite")
+    parser.add_argument("--mercury_db", type=str, default="./mercury.sqlite")
+    parser.add_argument("--user_db", type=str, default="./user.sqlite")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--version", action="version", version="__version__")
     args = parser.parse_args()
