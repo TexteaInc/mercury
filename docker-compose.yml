@@ -1,0 +1,29 @@
+services:
+  mercury:
+    image: mercury:latest
+    build:
+      dockerfile: ./Dockerfile
+    platform: linux/amd64
+    volumes:
+      - type: bind
+        source: ./mercury.sqlite
+        target: /app/mercury.sqlite
+      - type: bind
+        source: ./users.sqlite
+        target: /app/users.sqlite
+      - type: bind
+        source: ./labels.yaml
+        target: /app/labels.yaml
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    secrets:
+      - secret_key
+      - openai_api_key
+
+
+secrets:
+  secret_key:
+    file: ./secrets/secret_key
+  openai_api_key:
+    file: ./secrets/openai_api_key
