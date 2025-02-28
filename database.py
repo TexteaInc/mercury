@@ -298,7 +298,6 @@ class Database:
 
         return data_for_labeling
     
-    @database_lock()
     def get_annotation_comments(self, annot_id: int):
         sql_cmd = "SELECT * FROM comments WHERE annot_id = ?"
         res = self.mercury_db.execute(sql_cmd, (annot_id,))
@@ -306,7 +305,6 @@ class Database:
         return comments
 
 
-    @database_lock()
     def get_comment_by_id(self, comment_id: int):
         sql_cmd = "SELECT * FROM comments WHERE comment_id = ?"
         res = self.mercury_db.execute(sql_cmd, (comment_id,))
@@ -368,10 +366,10 @@ class Database:
         res = self.mercury_db.execute(sql_cmd, (label_data["record_id"],))
         annotation = res.fetchone()
         if annotation is None:
-            return
+            return None
         # check annotator
         if annotation[0] != label_data["annotator"]:
-            return
+            return False
         # update the record
         sql_cmd = "UPDATE annotations SET annot_spans = ?, label = ?, note = ? WHERE annot_id = ?"
         self.mercury_db.execute(sql_cmd, (
@@ -381,6 +379,7 @@ class Database:
             label_data["record_id"],
         ))
         self.mercury_db.commit()
+        return True
 
     @database_lock()
     def push_annotation(self, label_data: OldLabelData):
@@ -451,15 +450,17 @@ class Database:
         # self.annotations.drop(record_index, inplace=True)
         # self.vectara_client.delete_document(self.annotation_corpus_id, record_id)
         sql_cmd = "DELETE FROM annotations WHERE annot_id = ? AND annotator = ?"
-        self.mercury_db.execute(sql_cmd, (int(record_id), annotator))
+        result = self.mercury_db.execute(sql_cmd, (int(record_id), annotator))
+        if result.rowcount == 0:
+            return False
         self.mercury_db.commit()
+        return True
 
     @database_lock()
     def change_user_name(self, user_id: str, user_name: str):
         self.user_db.execute("UPDATE users SET user_name = ? WHERE user_id = ?", (user_name, user_id))
         self.user_db.commit()
 
-    @database_lock()
     def get_user_by_id(self, user_id: str):
         res = self.user_db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
         user = res.fetchone()
@@ -472,7 +473,6 @@ class Database:
             return None
         return user_name[0]
 
-    @database_lock()
     # def export_user_data(self, user_id: str) -> list[LabelData]:
     def export_user_data(self, annotator_uuid: str) -> list[LabelData]:
         # return self.annotations[self.annotations["user_id"] == user_id].to_dict(orient="records")
@@ -492,7 +492,6 @@ class Database:
             }, "new2old"))
         return label_data
 
-    @database_lock()
     # def export_task_history(self, task_index: int, user_id: str) -> list[LabelData]:
     def export_task_history(self, sample_id: int) -> list[LabelData]:
         # return self.annotations[
@@ -523,7 +522,6 @@ class Database:
             }, "new2old", usernames[annotator]))
         return label_data
 
-    @database_lock()
     def dump_annotator_labels(self, annotator: str):
         sql_cmd = "SELECT * FROM annotations WHERE annotator = ?"
         res = self.mercury_db.execute(sql_cmd, (annotator,))
@@ -577,7 +575,6 @@ class Database:
 
         return results_nested
 
-    @database_lock()
     # def dump_all_data(
     def dump_annotation(
             self,
@@ -658,7 +655,6 @@ class Database:
             json.dump(results_nested, f, indent=2, ensure_ascii=False)
             # TODO add JSONL support. Automatically detect file format based on filename extension
 
-    @database_lock()
     def auth_user(self, email: str, password: str):
         res = self.user_db.execute("SELECT * FROM users WHERE email = ?", (email,))
         user = res.fetchone()
