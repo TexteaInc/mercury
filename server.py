@@ -250,7 +250,7 @@ async def patch_task(task_index: int, record_id: int, label: Label, user: Annota
         raise HTTPException(status_code=404, detail="Annotation not found")
     if not result:
         raise HTTPException(status_code=403, detail="You are not allowed to edit other's annotation")
-    
+
     return {"message": "success"}
 
 
@@ -427,33 +427,34 @@ async def delete_annotation(record_id: str, user: Annotated[User, Depends(get_us
 
 
 @app.get("/labels")
-async def get_labels():
+async def dump_labels():
     return database.dump_annotation(dump_file=None)
 
 
-@app.get("/history")  # redirect route to history.html
-async def history():
-    return FileResponse("dist/history.html")
-
-
-@app.get("/viewer")
-async def viewer():
-    return FileResponse("dist/viewer.html")
-
-
 @app.get("/login")
-async def login():
+async def login_page():
     return FileResponse("dist/login.html")
 
 
 if __name__ == "__main__":
-    app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
+    if os.path.exists("dist"):
+        app.mount("/", StaticFiles(directory="dist", html=True), name="dist")
 
     import argparse
 
+    if os.getenv("USER_DB") is None:
+        user_db_default = "./users.sqlite"
+    else:
+        user_db_default = os.getenv("USER_DB")
+
+    if os.getenv("MERCURY_DB") is None:
+        mercury_db_default = "./mercury.sqlite"
+    else:
+        mercury_db_default = os.getenv("MERCURY_DB")
+
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--mercury_db", type=str, required=True, default="./mercury.sqlite")
-    parser.add_argument("--user_db", type=str, required=True, default="./user.sqlite")
+    parser.add_argument("--mercury_db", type=str, default=mercury_db_default)
+    parser.add_argument("--user_db", type=str, default=user_db_default)
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--version", action="version", version="__version__")
     args = parser.parse_args()

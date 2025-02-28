@@ -1,14 +1,15 @@
-import { create } from "zustand"
-import { handleRequestError, isRequestError, Task } from "../utils/types"
-import { getSingleTask } from "../utils/request"
+import type { Task } from "../utils/types"
 import { createTrackedSelector } from "react-tracked"
+import { create } from "zustand"
+import { getSingleTask } from "../utils/request"
+import { handleRequestError, isRequestError } from "../utils/types"
 
 interface TaskState {
-  current: Task | null,
+  current: Task | null
   fetch: (index: number) => Promise<void>
 }
 
-export const useTaskStore = create<TaskState>()((set) => ({
+export const useTaskStore = create<TaskState>()(set => ({
   current: null,
   fetch: async (index: number) => {
     try {
@@ -18,10 +19,9 @@ export const useTaskStore = create<TaskState>()((set) => ({
         return
       }
       set({ current: task })
-    }
-    catch (e) {
+    } catch (e) {
       set({ current: null })
-      console.log(e)
+      console.warn(e)
       throw e
     }
   },

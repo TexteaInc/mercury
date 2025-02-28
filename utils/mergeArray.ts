@@ -1,6 +1,6 @@
 import type { SectionResponse, SectionResponseSlice } from "./types"
 
-const mergeArrays = (a: SectionResponse, b: SectionResponseSlice): SectionResponse => {
+function mergeArrays(a: SectionResponse, b: SectionResponseSlice): SectionResponse {
   const bStart = b.offset
   const bEnd = b.offset + b.len
   const c = a.slice().sort((x, y) => x.offset - y.offset)
@@ -47,8 +47,9 @@ const mergeArrays = (a: SectionResponse, b: SectionResponseSlice): SectionRespon
 }
 
 // start, end, isBackend, score, true_index
-const updateSliceArray = (text: string, slices: SectionResponse): [number, number, boolean, number, number][] => {
-  if (slices.length === 0) return [[0, text.length - 1, false, 0, -1] as [number, number, boolean, number, number]]
+function updateSliceArray(text: string, slices: SectionResponse): [number, number, boolean, number, number][] {
+  if (slices.length === 0)
+    return [[0, text.length - 1, false, 0, -1] as [number, number, boolean, number, number]]
   const sliceArray: [number, number, boolean, number, number][] = []
   for (let i = 0; i < slices.length; i++) {
     const slice = slices[i]
@@ -72,13 +73,13 @@ const updateSliceArray = (text: string, slices: SectionResponse): [number, numbe
   return newSliceArray
 }
 
-type HistorySlice = {
+interface HistorySlice {
   text: string
   labeled: boolean
   consistent: string[]
 }
 
-const historyTextToSlice = (text: string, start: number, end: number, consistent: string[]): HistorySlice[] => {
+function historyTextToSlice(text: string, start: number, end: number, consistent: string[]): HistorySlice[] {
   const range = [start, end]
   const part: HistorySlice[] = []
 
@@ -103,4 +104,4 @@ const historyTextToSlice = (text: string, start: number, end: number, consistent
   return part
 }
 
-export { mergeArrays, updateSliceArray, type HistorySlice, historyTextToSlice }
+export { type HistorySlice, historyTextToSlice, mergeArrays, updateSliceArray }

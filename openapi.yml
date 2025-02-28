@@ -1,7 +1,7 @@
-openapi: '3.0.3'
+openapi: 3.0.3
 info:
   title: Mercury
-  version: '0.1.1'
+  version: 0.1.1
 servers:
   - url: http://localhost:8000
     description: Local
@@ -12,30 +12,30 @@ paths:
       summary: Get candidate labels
       description: Get candidate labels for labeling
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LabelMeta'
+                $ref: "#/components/schemas/LabelMeta"
 
   /user/me:
     get:
       summary: Get current user info
       description: Get current user info
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
+                $ref: "#/components/schemas/User"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPException'
+                $ref: "#/components/schemas/HTTPException"
       security:
         - OAuth2: []
 
@@ -53,18 +53,18 @@ paths:
                   type: string
         required: true
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestMessage'
-        '401':
+                $ref: "#/components/schemas/RequestMessage"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPException'
+                $ref: "#/components/schemas/HTTPException"
       security:
         - OAuth2: []
 
@@ -73,20 +73,20 @@ paths:
       summary: Export labels made by current user
       description: Export labels made by current user
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LabelData'
-        '401':
+                  $ref: "#/components/schemas/LabelData"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPException'
+                $ref: "#/components/schemas/HTTPException"
       security:
         - OAuth2: []
 
@@ -95,7 +95,7 @@ paths:
       summary: Get task count
       description: Get task count
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -116,14 +116,14 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/Task'
-                  - $ref: '#/components/schemas/RequestError'
+                  - $ref: "#/components/schemas/Task"
+                  - $ref: "#/components/schemas/RequestError"
 
   /task/{task_index}/history:
     get:
@@ -136,23 +136,23 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/LabelData'
-        '401':
+                  $ref: "#/components/schemas/LabelData"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPException'
+                $ref: "#/components/schemas/HTTPException"
       security:
         - OAuth2: []
-  
+
   /task/{task_index}/label:
     post:
       summary: Submit a label for a task
@@ -167,20 +167,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Label'
+              $ref: "#/components/schemas/Label"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestMessage'
-        '401':
+                $ref: "#/components/schemas/RequestMessage"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPException'
+                $ref: "#/components/schemas/HTTPException"
       security:
         - OAuth2: []
 
@@ -203,15 +203,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Label'
+              $ref: "#/components/schemas/Label"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestMessage'
-        '401':
+                $ref: "#/components/schemas/RequestMessage"
+        "401":
           description: Unauthorized
           content:
             application/json:
@@ -246,9 +246,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Selection'
+              $ref: "#/components/schemas/Selection"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
@@ -256,8 +256,8 @@ paths:
                 oneOf:
                   - type: array
                     items:
-                      $ref: '#/components/schemas/SelectionResponseSlice'
-                  - $ref: '#/components/schemas/RequestError'
+                      $ref: "#/components/schemas/SelectionResponseSlice"
+                  - $ref: "#/components/schemas/RequestError"
 
   /annot/{annot_index}/comments:
     parameters:
@@ -271,14 +271,14 @@ paths:
       summary: Get all comments for a label
       description: Get all comments for a label
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Comment'
+                  $ref: "#/components/schemas/Comment"
     post:
       summary: Submit a comment for a label
       description: Submit a comment for a label
@@ -286,20 +286,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CommentData'
+              $ref: "#/components/schemas/CommentData"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestMessage'
-        '401':
+                $ref: "#/components/schemas/RequestMessage"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HTTPException'
+                $ref: "#/components/schemas/HTTPException"
       security:
         - OAuth2: []
 
@@ -323,15 +323,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CommentData'
+              $ref: "#/components/schemas/CommentData"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestMessage'
-        '401':
+                $ref: "#/components/schemas/RequestMessage"
+        "401":
           description: Unauthorized
           content:
             application/json:
@@ -341,18 +341,18 @@ paths:
           description: Not allowed to edit other's comment
       security:
         - OAuth2: []
-    
+
     delete:
       summary: Delete a comment for a label
       description: Delete a comment for a label
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestMessage'
-        '401':
+                $ref: "#/components/schemas/RequestMessage"
+        "401":
           description: Unauthorized
           content:
             application/json:
@@ -362,7 +362,7 @@ paths:
           description: Not allowed to delete other's comment
       security:
         - OAuth2: []
-  
+
   /record/{record_id}:
     delete:
       summary: Delete a label
@@ -374,13 +374,13 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RequestMessage'
-        '401':
+                $ref: "#/components/schemas/RequestMessage"
+        "401":
           description: Unauthorized
           content:
             application/json:
@@ -420,7 +420,7 @@ components:
       properties:
         error:
           type: string
-    
+
     User:
       type: object
       properties:
@@ -458,7 +458,7 @@ components:
         - note
       properties:
         record_id:
-          type: string
+          type: integer
         sample_id:
           type: string
         summary_start:
@@ -481,7 +481,7 @@ components:
           type: string
         username:
           type: string
-    
+
     Label:
       type: object
       properties:
@@ -517,7 +517,7 @@ components:
           type: integer
         from_summary:
           type: boolean
-    
+
     SelectionResponseSlice:
       type: object
       properties:

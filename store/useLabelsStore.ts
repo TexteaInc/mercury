@@ -1,20 +1,22 @@
+import { createTrackedSelector } from "react-tracked"
 import { create } from "zustand"
 import { getAllLabels } from "../utils/request"
-import { createTrackedSelector } from "react-tracked"
 
 interface LabelsState {
-  labels: (string | object)[],
-  fetch: () => Promise<void>,
+  candidates: (string | object)[]
+  setCandidates: (candidates: (string | object)[]) => void
+  fetch: () => Promise<void>
 }
 
-export const useLabelsStore = create<LabelsState>()((set) => ({
-  labels: [],
+export const useLabelsStore = create<LabelsState>()(set => ({
+  candidates: [],
+  setCandidates: (candidates: (string | object)[]) => set({ candidates }),
   fetch: async () => {
     try {
       const labels = await getAllLabels()
-      set({ labels })
+      set({ candidates: labels })
     } catch (e) {
-      console.log(e)
+      console.warn(e)
       throw e
     }
   },

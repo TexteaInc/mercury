@@ -1,4 +1,4 @@
-const getRangeTextHandleableRange = (range: Range): [number, number] => {
+function getRangeTextHandleableRange(range: Range): [number, number] {
   let start = range.startContainer
   let end = range.endContainer
 

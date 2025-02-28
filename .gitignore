@@ -59,3 +59,7 @@ output.csv
 
 test.jsonl
 user.db
+
+*storybook.log
+
+secrets/
