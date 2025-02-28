@@ -113,10 +113,7 @@ class Ingester:
                 self.db.commit()
 
         self.db.execute(
-            "CREATE TABLE IF NOT EXISTS chunks (chunk_id INTEGER PRIMARY KEY, text TEXT, text_type TEXT, sample_id INTEGER, char_offset INTEGER, chunk_offset INTEGER)"
-        )
-        self.db.execute(
-            f"CREATE VIRTUAL TABLE embeddings USING vec0(embedding float[{self.embedding_dimension}])"
+            f"CREATE VIRTUAL TABLE IF NOT EXISTS chunks USING vec0(chunk_id INTEGER PRIMARY KEY, text TEXT, text_type TEXT, sample_id INTEGER, char_offset INTEGER, chunk_offset INTEGER, embedding float[{self.embedding_dimension}])"
         )
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY UNIQUE , value TEXT)"
@@ -186,13 +183,8 @@ class Ingester:
                 for chunk_offset, chunk_text in enumerate(chunks):
                     # print ([global_chunk_id, chunk_text, text_type, sample_id+1, char_offset, chunk_offset])
                     self.db.execute(
-                        "INSERT INTO chunks (chunk_id, text, text_type, sample_id, char_offset, chunk_offset) VALUES (?, ?, ?, ?, ?, ?)",
-                        [global_chunk_id, chunk_text, text_type, sample_id, char_offset, chunk_offset]
-                    )
-                    self.db.commit()
-                    self.db.execute(
-                        "INSERT INTO embeddings (rowid, embedding) VALUES (?, ?)",
-                        [global_chunk_id, serialize_f32(embeddings[chunk_offset])]
+                        "INSERT INTO chunks (chunk_id, text, text_type, sample_id, char_offset, chunk_offset, embedding) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        [global_chunk_id, chunk_text, text_type, sample_id, char_offset, chunk_offset, serialize_f32(embeddings[chunk_offset])]
                     )
                     self.db.commit()
 

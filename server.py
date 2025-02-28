@@ -57,6 +57,7 @@ class Label(BaseModel):
     consistent: list[str]
     note: str
 
+
 class Selection(BaseModel):
     start: int
     end: int
@@ -77,6 +78,7 @@ class User(BaseModel):
     name: str
     email: str
 
+
 class Comment(BaseModel):
     comment_id: int
     user_id: str
@@ -85,6 +87,7 @@ class Comment(BaseModel):
     parent_id: int | None
     text: str
     comment_time: str
+
 
 class CommentData(BaseModel):
     annot_id: int
@@ -117,7 +120,8 @@ def create_access_token(data: dict, secret_key: str, expires_delta: timedelta | 
 
 
 @app.post("/login")
-async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], config: Config = Depends(get_config)) -> Token:
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+                config: Config = Depends(get_config)) -> Token:
     auth_success, user_id = database.auth_user(form_data.username,
                                                form_data.password)
     if not auth_success:  # username here is actually email, since OAuth2 requires key be username
@@ -184,9 +188,11 @@ async def get_task(task_index: int = 0):
 async def get_task_history(task_index: int, _: Annotated[User, Depends(get_user)]):
     return database.export_task_history(task_index)
 
+
 @app.get("/task/{task_index}/other/annotations")
 async def get_other_annotations(task_index: int, user: Annotated[User, Depends(get_user)]):
     return database.get_others_annotation(user.id, task_index)
+
 
 @app.post("/task/{task_index}/label")
 async def post_task(task_index: int, label: Label, user: Annotated[User, Depends(get_user)]):
@@ -222,6 +228,7 @@ async def post_task(task_index: int, label: Label, user: Annotated[User, Depends
     })  # the label_data is in databse.OldLabelData format
     return {"message": "success"}
 
+
 @app.patch("/task/{task_index}/label/{record_id}")
 async def patch_task(task_index: int, record_id: int, label: Label, user: Annotated[User, Depends(get_user)]):
     sample_id = task_index
@@ -245,6 +252,7 @@ async def patch_task(task_index: int, record_id: int, label: Label, user: Annota
     })
     return {"message": "success"}
 
+
 @app.post(
     "/task/{task_index}/select")  # TODO: to be updated by Forrest using openAI's API or local model to embed text on the fly
 async def post_selections(task_index: int, selection: Selection):
@@ -258,7 +266,7 @@ async def post_selections(task_index: int, selection: Selection):
         if not selection.from_summary
         else tasks[task_index]["summary"][selection.start: selection.end]
     )
-    id_ = tasks[task_index]["_id"]
+    # id_ = tasks[task_index]["_id"]
 
     # response = vectara_client.query(
     #     corpus_id=use_id,
@@ -274,37 +282,38 @@ async def post_selections(task_index: int, selection: Selection):
     embedding = embedder.embed([query], embedding_dimension=configs["embedding_dimension"])[0]
 
     # Then get the chunk_id's from the opposite document
-    sql_cmd = "SELECT chunk_id, text FROM chunks WHERE text_type = ? AND sample_id = ?"
+    # sql_cmd = "SELECT chunk_id, text FROM chunks WHERE text_type = ? AND sample_id = ?"
     if selection.from_summary:
         text_type = "source"
     else:
         text_type = "summary"
 
-    chunk_id_and_text = database.mercury_db.execute(sql_cmd, [text_type, task_index]).fetchall()
-    search_chunk_ids = [row[0] for row in chunk_id_and_text]
-    vecter_db_row_ids = [str(x + 1) for x in search_chunk_ids]  # rowid starts from 1 while chunk_id starts from 0
+    # chunk_id_and_text = database.mercury_db.execute(sql_cmd, [text_type, task_index]).fetchall()
+    # search_chunk_ids = [row[0] for row in chunk_id_and_text]
+    # vecter_db_row_ids = [str(x + 1) for x in search_chunk_ids]  # rowid starts from 1 while chunk_id starts from 0
 
-    if len(search_chunk_ids) == 1:  # no need for vector search
-        selections = [{
-            "score": 1.0,
-            "offset": 0,
-            "len": len(chunk_id_and_text[0][1]),
-            "to_doc": selection.from_summary,
-        }]
-        return selections
+    # if len(search_chunk_ids) == 1:  # no need for vector search
+    #     selections = [{
+    #         "score": 1.0,
+    #         "offset": 0,
+    #         "len": len(chunk_id_and_text[0][1]),
+    #         "to_doc": selection.from_summary,
+    #     }]
+    #     return selections
 
     # Do vector search on the `embeddings` table when rowid is in chunk_ids
     # print ("Search for row ids: ", search_chunk_ids)
     # print ("Embedding: ", embedding)
-    sql_cmd = " \
-        SELECT  \
-            rowid, \
-            distance \
-        FROM embeddings " \
-              " WHERE rowid IN ({0})" \
-              "AND embedding MATCH '{1}'  \
-              ORDER BY distance \
-              LIMIT 5;".format(', '.join(vecter_db_row_ids), embedding)
+    # sql_cmd = " \
+    #     SELECT  \
+    #         chunk_id, \
+    #         distance \
+    #     FROM chunks " \
+    #           " WHERE chunk_id IN ({0})" \
+    #           "AND embedding MATCH '{1}'  \
+    #           ORDER BY distance \
+    #           LIMIT 5;".format(', '.join(vecter_db_row_ids), embedding)
+    sql_cmd = f"SELECT chunk_id, distance FROM chunks WHERE k =5 AND sample_id = {task_index} AND text_type = '{text_type}' AND embedding MATCH '{embedding}' ORDER BY distance"
     # print ("SQL_CMD", sql_cmd)
 
     # vector_search_result = database.db.execute(sql_cmd, [*search_chunk_ids, serialize_f32(embedding)]).fetchall()
@@ -319,7 +328,7 @@ async def post_selections(task_index: int, selection: Selection):
         ', '.join('?' for _ in chunk_ids_of_top_k))
     search_chunk_ids = [row[0] for row in vector_search_result]
     response = database.mercury_db.execute(sql_cmd, search_chunk_ids).fetchall()
-    # [(1, 'This is a test.', 0, 14), (2, 'This is a test.', 15, 14)]
+    # [(1, 'This is a test.', 0), (2, 'This is a test.', 15)]
 
     # organize into a dict of keys "score", "offset", "len", "to_doc"
     # and append to a list of selections
@@ -399,7 +408,8 @@ async def delete_comments(annot_index: int, comment_id: int, user: Annotated[Use
 
 
 @app.patch("/annot/{annot_index}/comments/{comment_id}")
-async def patch_comments(annot_index: int, comment_id: int, comment: CommentData, user: Annotated[User, Depends(get_user)]):
+async def patch_comments(annot_index: int, comment_id: int, comment: CommentData,
+                         user: Annotated[User, Depends(get_user)]):
     target = database.get_comment_by_id(comment_id)
     if target[1] != user.id or target[2] != annot_index:
         raise HTTPException(status_code=403)
