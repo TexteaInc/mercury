@@ -1,11 +1,16 @@
-- Questionable
-- Benign
-- Unwanted:
-    - Extrinsic
-    - Instrinsic
-- Unwanted1:
-    - Extrinsic
-    - Instrinsic
-- Unwanted2:
-    - Extrinsic
-    - Instrinsic
+titles:
+    - Source
+    - Summary
+
+labels:
+    - Questionable
+    - Benign
+    - Unwanted:
+        - Extrinsic
+        - Instrinsic
+    - Unwanted1:
+        - Extrinsic
+        - Instrinsic
+    - Unwanted2:
+        - Extrinsic
+        - Instrinsic

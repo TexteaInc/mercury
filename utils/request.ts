@@ -51,6 +51,12 @@ async function getAllLabels(): Promise<(string | object)[]> {
   return data as string[]
 }
 
+async function getAllTitles(): Promise<string[]> {
+  const response = await fetch(`${backend}/titles`)
+  const data = await response.json()
+  return data as string[]
+}
+
 async function getAllTasksLength(): Promise<AllTasksLength> {
   const response = await fetch(`${backend}/task`)
   const data = await response.json()
@@ -202,6 +208,7 @@ export {
   exportLabel,
   getAllLabels,
   getAllTasksLength,
+  getAllTitles,
   getComment,
   getSingleTask,
   getTaskHistory,

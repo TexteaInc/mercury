@@ -136,8 +136,14 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 @app.get("/candidate_labels")
 async def get_labels() -> list:  # get all candidate labels for human annotators to choose from
     with open("labels.yaml") as f:
-        labels = yaml.safe_load(f)
+        labels = yaml.safe_load(f)["labels"]
     return labels
+
+@app.get("/titles")
+async def get_titles() -> list:  # get all candidate labels for human annotators to choose from
+    with open("labels.yaml") as f:
+        titles = yaml.safe_load(f)["titles"]
+    return titles
 
 
 @app.get("/user/me")

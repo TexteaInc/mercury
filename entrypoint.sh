@@ -25,7 +25,10 @@ else
     echo "Warning: .env file not found"
   fi
 fi
-
+chown -R 1001:1001 /app/mercury.sqlite
+chmod 666 /app/mercury.sqlite
+chown -R 1001:1001 /app/users.sqlite
+chmod 666 /app/users.sqlite
 # Launch the server
 echo "Launching server..."
 python server.py "$@"

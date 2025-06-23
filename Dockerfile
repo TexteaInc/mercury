@@ -27,6 +27,13 @@ FROM backend-base AS backend-deps
 WORKDIR /app
 
 COPY requirements.txt ./
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+ENV BLIS_ARCH="generic"
+RUN pip install -U pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Production image, copy all the files and run next
@@ -41,7 +48,7 @@ RUN adduser --system --uid 1001 mercury
 
 # Automatically leverage output traces to reduce image size
 COPY --from=front-builder --chown=app:mercury /app/dist ./dist
-COPY server.py database.py version.py ingester.py ./
+COPY --chown=app:mercury server.py database.py version.py ingester.py ./
 COPY entrypoint.sh ./
 
 USER mercury

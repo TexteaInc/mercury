@@ -1,6 +1,7 @@
 import type { SelectionRequest } from "@/utils/types"
 import { Window } from "@/components/ui/window"
 import { useTrackedEditorStore } from "@/store/useEditorStore"
+import { useTrackedLabelsStore } from "@/store/useLabelsStore"
 import { generateUserColor, getServerColor } from "@/utils/color"
 import { IconLoader } from "@tabler/icons-react"
 import rangy from "rangy"
@@ -24,6 +25,7 @@ export interface EditorPanelRef {
 
 export default function EditorPanel({ docType, type, text, pending, onSelectionChange, ref }: EditorPanelProps) {
   const editorStore = useTrackedEditorStore()
+  const labelsStore = useTrackedLabelsStore()
   const [selection, setSelection] = useState<SelectionRequest | null>(null)
 
   const handleMouseUp = useCallback(() => {
@@ -121,7 +123,7 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
         }, [])
     }
     return []
-  }, [selection, editorStore.serverSection, docType, editorStore.activeList, editorStore.history, pending, editorStore.viewing])
+  }, [selection, pending, editorStore.editing, editorStore.serverSection, editorStore.viewing, editorStore.activeList, editorStore.history, docType])
 
   useImperativeHandle(ref, () => {
     return {
@@ -137,7 +139,7 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
   })
 
   return (
-    <Window name={docType === "summary" ? "Summary" : "Source"}>
+    <Window name={labelsStore.titles[docType === "summary" ? 1 : 0]}>
       <div className="relative w-full h-full">
         {pending && (
           <div className="flex justify-center items-center absolute inset-0 z-10">
