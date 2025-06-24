@@ -252,6 +252,8 @@ async def patch_task(task_index: int, record_id: int, label: Label, user: Annota
     })
     return {"message": "success"}
 
+def break_into_n_grams(text: str, n: int = 5):
+    return [text[i:i + n] for i in range(0, len(text), n)]
 
 @app.post(
     "/task/{task_index}/select")  # TODO: to be updated by Forrest using openAI's API or local model to embed text on the fly
@@ -267,16 +269,6 @@ async def post_selections(task_index: int, selection: Selection):
         else tasks[task_index]["summary"][selection.start: selection.end]
     )
     id_ = tasks[task_index]["_id"]
-
-    # response = vectara_client.query(
-    #     corpus_id=use_id,
-    #     query=query,
-    #     top_k=5,
-    #     # TODO: Please all users to select k value via a sliding bar
-    #     lang="auto",
-    #     metadata_filter=f"doc.id = '{id_}'",
-    #     do_generation=False,
-    # )
 
     # first embedd query
     embedding = embedder.embed([query], embedding_dimension=configs["embedding_dimension"])[0]
@@ -314,6 +306,7 @@ async def post_selections(task_index: int, selection: Selection):
     #           ORDER BY distance \
     #           LIMIT 5;".format(', '.join(vecter_db_row_ids), embedding)
     sql_cmd = f"SELECT chunk_id, distance FROM chunks WHERE k =5 AND sample_id = {task_index} AND text_type = '{text_type}' AND embedding MATCH '{embedding}' ORDER BY distance"
+    # TODO: Please allow users to select k value via a sliding bar
     # print ("SQL_CMD", sql_cmd)
 
     # vector_search_result = database.db.execute(sql_cmd, [*search_chunk_ids, serialize_f32(embedding)]).fetchall()

@@ -81,7 +81,7 @@ class Ingester:
         self.embedding_dimension = embedding_dimension
         if embedding_model_id == "bge-small-en-v1.5":
             self.embedding_dimension = 384
-        elif embedding_model_id == 'all-mpnet-base-v2':
+        elif embedding_model_id in ['all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1']:
             self.embedding_dimension = 768
         self.embedding_model_id = embedding_model_id
 
@@ -103,8 +103,8 @@ class Ingester:
                 self.db.execute("DROP TABLE IF EXISTS chunks")
                 self.db.execute("DROP TABLE IF EXISTS config")
                 self.db.execute("DROP TABLE IF EXISTS annotations")
-                self.db.execute("DROP TABLE IF EXISTS leaderboard")
-                self.db.execute("DROP TABLE IF EXISTS users")
+                # self.db.execute("DROP TABLE IF EXISTS leaderboard") # I don't know what this table is used for. -- Forrest, 2025-06-24
+                # self.db.execute("DROP TABLE IF EXISTS users") # users are not in CORPUS_DB now. -- Forrest, 2025-06-24
                 self.db.commit()
 
         # if embedding model changes, we must re-embed the data
@@ -157,8 +157,12 @@ class Ingester:
         
         df.columns = df.columns.str.lower()
         [text_1_name, text_2_name] = df.columns[0:2]
-        self.text[text_1_name]: List[str] = df[text_1_name].tolist()
-        self.text[text_2_name]: List[str] = df[text_2_name].tolist()
+        # self.text[text_1_name]: List[str] = df[text_1_name].tolist()
+        # self.text[text_2_name]: List[str] = df[text_2_name].tolist()
+        self.text["text_1"]: List[str] = df[text_1_name].tolist() 
+        self.text["text_2"]: List[str] = df[text_2_name].tolist()
+        # Change the column names to text_1 and text_2 instead of the original column names 
+        # -- Forrest, 2025-06-24
 
         self.db.execute(
             "INSERT OR REPLACE INTO config (key, value) VALUES ('text_1_name', ?)",
