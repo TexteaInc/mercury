@@ -140,6 +140,14 @@ class Ingester:
             "INSERT OR REPLACE INTO config (key, value) VALUES ('version', ?)",
             [__version__]
         )
+        self.db.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES ('ingest_column_1', ?)",
+            [self.ingest_column_1],
+        )
+        self.db.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES ('ingest_column_2', ?)",
+            [self.ingest_column_2],
+        )
         
         self.db.commit()
 

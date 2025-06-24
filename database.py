@@ -268,12 +268,14 @@ class Database:
                 }
             }
         """
-
+        config = self.fetch_configs()
+        ingest_column_1 = config["ingest_column_1"]
+        ingest_column_2 = config["ingest_column_2"]
         data_for_labeling = [
             {
                 "_id": str(sample_id),
-                "source": " ".join(sectioned_chunks[sample_id]["source"].values()),
-                "summary": " ".join(sectioned_chunks[sample_id]["summary"].values())
+                "source": " ".join(sectioned_chunks[sample_id][ingest_column_1].values()),
+                "summary": " ".join(sectioned_chunks[sample_id][ingest_column_2].values())
             }
             for sample_id in sectioned_chunks
         ]
@@ -528,10 +530,13 @@ class Database:
         annotations = res.fetchall()
         results = []
         results_dict = {}
+        config = self.fetch_configs()
+        ingest_column_1 = config["ingest_column_1"]
+        ingest_column_2 = config["ingest_column_2"]
         for annot_id, sample_id, annot_spans, annotator, label, note in annotations:
             # find the source and summary text by doc_id
             full_texts = {}
-            for text_type in ["source", "summary"]:
+            for text_type in [ingest_column_1, ingest_column_2]:
                 sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
                 res = self.mercury_db.execute(sql_cmd, (sample_id, text_type))
                 text = res.fetchall()  # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
@@ -551,7 +556,7 @@ class Database:
 
             results.append(result_local)
 
-            results_dict.setdefault(sample_id, {"source": full_texts["source"], "summary": full_texts["summary"],
+            results_dict.setdefault(sample_id, {ingest_column_1: full_texts[ingest_column_1], ingest_column_2: full_texts[ingest_column_2],
                                                 "annotations": []})
             results_dict[sample_id]["annotations"].append(result_local)
 
@@ -590,10 +595,13 @@ class Database:
         # match annotations with chunks by doc_id
         results = []
         results_dict = {}  # keys are sample_id, values are source text, summary text, and each pair of spans and labels and annotators
+        config = self.fetch_configs()
+        ingest_column_1 = config["ingest_column_1"]
+        ingest_column_2 = config["ingest_column_2"]
         for annot_id, sample_id, annot_spans, annotator, label, note in annotations:
             # find the source and summary text by doc_id
             full_texts = {}
-            for text_type in ["source", "summary"]:
+            for text_type in [ingest_column_1, ingest_column_2]:
                 sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
                 res = self.mercury_db.execute(sql_cmd, (sample_id, text_type))
                 text = res.fetchall()  # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
@@ -612,7 +620,7 @@ class Database:
 
             results.append(result_local)
 
-            results_dict.setdefault(sample_id, {"source": full_texts["source"], "summary": full_texts["summary"],
+            results_dict.setdefault(sample_id, {ingest_column_1: full_texts[ingest_column_1], ingest_column_2: full_texts[ingest_column_2],
                                                 "annotations": []})
             results_dict[sample_id]["annotations"].append(result_local)
 
@@ -635,13 +643,13 @@ class Database:
         for sample_id in sample_meta_dict:
             if sample_id not in annotated_sample_ids:
                 full_texts = {}
-                for text_type in ["source", "summary"]:
+                for text_type in [ingest_column_1, ingest_column_2]:
                     sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
                     res = self.mercury_db.execute(sql_cmd, (sample_id, text_type))
                     text = res.fetchall()  # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
                     text = [t[0] for t in text]
                     full_texts[text_type] = " ".join(text)
-                sample_dict = {"sample_id": sample_id, "source": full_texts["source"], "summary": full_texts["summary"],
+                sample_dict = {"sample_id": sample_id, ingest_column_1: full_texts[ingest_column_1], ingest_column_2: full_texts[ingest_column_2],
                                "annotations": []}
                 sample_dict.update(sample_meta_dict[sample_id])
                 new_results_nested.append(sample_dict)
