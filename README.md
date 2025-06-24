@@ -2,21 +2,14 @@
 
 Mercury is a semantic-assisted, cross-text text labeling tool.
 
-1. semantic-assisted: when you select a text span, semantically related text segments will be highlighted -- so you don't have to eyeball through lengthy texts.
+1. search-assisted: when you select a text span, semantically or lexically related text segments will be highlighted -- so you don't have to eyeball through lengthy texts.
 2. cross-text: you are labeling text spans from two different texts.
 
-Therefore, Mercury is very efficient for the labeling of NLP tasks that involve comparing texts between two documents which are also lengthy, such as hallucination detection or factual consistency/faithfulness in RAG systems. Semantic assistance not only saves time and reduces fatigues but also avoids mistakes.
-
-Currently, Mercury only supports labeling inconsistencies between the source and summary for summarization in RAG.
+Therefore, Mercury is very efficient for the labeling of NLP tasks that involve comparing texts between two documents which are also lengthy, such as hallucination detection or factual consistency/faithfulness in RAG systems. Search assistance not only saves time and reduces fatigues but also avoids mistakes.
 
 ![Header](usage/selection_from_highlight.png)
 
 ## Dependencies and setup
-
-> [!NOTE]
-> You need Python and Node.js.
-
-Mercury uses [`sqlite-vec`](https://github.com/asg017/sqlite-vec) to store and search embeddings.
 
 1. `pip3 install -r requirements.txt && python3 -m spacy download en_core_web_sm`
 
@@ -24,50 +17,91 @@ Mercury uses [`sqlite-vec`](https://github.com/asg017/sqlite-vec) to store and s
 
 3. Compile the frontend: `pnpm install && pnpm build`
 
-4. To use `sqlite-vec` via Python's built-in `sqlite3` module, you must have SQLite>3.41 (otherwise `LIMIT` or `k=?` will not work properly with `rowid IN (?)` for vector search) installed and ensure Python's built-in `sqlite3` module is built for SQLite>3.41. Note that Python's built-in `sqlite3` module uses its own binary library that is independent of the OS's SQLite. So upgrading the OS's SQLite will not upgrade Python's `sqlite3` module.
-   To manually upgrade Python's `sqlite3` module to use SQLite>3.41, here are the steps: 
-    * Download and compile SQLite>3.41.0 from source
-         ```bash
-         wget https://www.sqlite.org/2024/sqlite-autoconf-3460100.tar.gz 
-         tar -xvf sqlite-autoconf-3460100.tar.gz
-         cd sqlite-autoconf-3460100
-         ./configure
-         make
-         ```
-    * Set Python's built-in `sqlite3` module to use the compiled SQLite.
-      Suppose you are currently at path `$SQLITE_Compile`. Then set this environment variable (feel free to replace
-      `$SQLITE_Compile` with the actual absolute/relative path):
+4. <details><summary>Upgrade SQLite to 3.41+ (if necessary)</summary>
+
+   You must upgrade SQLite to 3.41+ to use `sqlite-vec` via Python's built-in `sqlite3` module. Otherwise, `LIMIT` or `k=?` will not work properly with `rowid IN (?)` for vector search. On Ubuntu 22.04, the SQLite version is [3.37](https://launchpad.net/ubuntu/jammy/+source/sqlite3). Note that Python's built-in `sqlite3` module uses its own binary library that is independent of the OS's SQLite. So upgrading the OS's SQLite will not upgrade Python's `sqlite3` module.
+
+   To manually upgrade Python's `sqlite3` module to version 3.41+, here are the steps: 
+
+      * Download and compile SQLite>3.41.0 from source
+        ```bash
+        wget https://www.sqlite.org/2024/sqlite-autoconf-3460100.tar.gz 
+        tar -xvf sqlite-autoconf-3460100.tar.gz
+        cd sqlite-autoconf-3460100
+        ./configure
+        make
+        ```
+
+      * Set Python's built-in `sqlite3` module to use the compiled SQLite.
+        Suppose you are currently at path `$SQLITE_Compile`. Then set this environment variable (feel free to replace
+        `$SQLITE_Compile` with the actual absolute/relative path):
 
         ```bash
-        export LD_PRELAOD=$SQLITE_Compile/.libs/libsqlite3.so
+        export LD_PRELOAD=$SQLITE_Compile/.libs/libsqlite3.so
         ```
-      You may add the above line to `~.bashrc` to make it permanent.
-    * Verify that Python's `sqlite3` module is using the correct SQLite, run this Python code:
-      ```shell
-      python3 -c "import sqlite3; print(sqlite3.sqlite_version)"
-      ```
-      If the output is the version of SQLite you just compiled, you are good to go.
-    * If you are using Mac and run into troubles, please follow
-      SQLite-vec's [instructions](https://alexgarcia.xyz/sqlite-vec/python.html#updated-sqlite).
+        You may add the above line to `~.bashrc` to make it permanent.
 
-5. To use `sqlite-vec` directly in `sqlite` prompt, simply [compile
+      * Verify that Python's `sqlite3` module is using the correct SQLite, run this Python code:
+        ```shell
+        python3 -c "import sqlite3; print(sqlite3.sqlite_version)"
+        ```
+        If the output is the version of SQLite you just compiled, you are good to go.
+
+      * If you are using Mac and run into troubles, please follow
+        SQLite-vec's [instructions](https://alexgarcia.xyz/sqlite-vec/python.html#updated-sqlite).
+
+
+   To use `sqlite-vec` directly in `sqlite` prompt, simply [compile
    `sqlite-vec` from source](https://alexgarcia.xyz/sqlite-vec/compiling.html) and load the compiled `vec0.o`. The usage
    can be found in the SQLite-vec's [README](https://github.com/asg017/sqlite-vec?tab=readme-ov-file#sample-usage).
+   </details>
 
 ## Usage
 
-1. Ingest data for labeling
+Mercury is powered by two SQLite databases:
 
-   Run `python3 ingester.py -h` to see the options.
+1. `CORPUS_DB`: the corpus and annotations (if annotated)
+2. `USER_DB`: the ID and authentication info of annotators
 
-   The ingester takes a CSV, JSON, or JSONL file and loads texts from two text columns (configurable via option `ingest_column_1` and `ingest_column_2` which default to `source` and `summary`) of the file. After ingestion, the data will be stored in the SQLite database, denoted as `CORPUS_DB` in the following steps.
+You can pair the same `USER_DB` with multiple `CORPUS_DB`s for the same group of users to annotate different corpora.
 
-2. Manually set the labels for annotators to choose from in the `labels.yaml` file. Mercury supports hierarchical labels.
-3. Generate and set a JWT secret key: `export SECRET_KEY=$(openssl rand -base64 32)`. You can rerun the command above to generate a new secret key when needed, especially when the old one is compromised. Note that changing the JWT token will log out all users. Optionally, you can also set `EXPIRE_MINUTES` to change the expiration time of the JWT token. The default is 7 days (10080 minutes).
-4. Start the Mercury annotation server: `python3 server.py --corpus_db {CORPUS_DB} --user_db {USER_DB}`. 
+### Steps
 
-   Be sure to set the candidate labels to choose from in the `labels.yaml` file. The server will run on `http://localhost:8000` by default. The default `USER_DB`, namely `users.sqlite`, is distributed with the code repo with the default Email and password as `test@example.com` and `test`, respectively.
-5. **Optional** To add/update/list users in a `USER_DB`, see [User administration in Mercury](user_admin.md) for more details.
+1. Prepare the cross-text data for labeling. The data should be in JSON or JSONL format. The first two columns/fields are mandatory and must be in text-type. They will be cross-text annotated. The rest of the columns/fields are optional and will be stored as metadata. Like below:
+
+   ```json
+   {
+       "source": "The quick brown fox. Jumps over a lazy dog. ",
+       "summary": "26 letters.", 
+       "timestamp": "2025-06-24 11:23:16",
+       "from_dataset": "XYZ"
+   }
+   ```
+
+   A more real example is given in the file `example_data/to_ingest.json`.
+
+2. Ingest data for labeling
+
+   Run `python3 ingester.py -h` to see the options. The default embedder is `dummy` (random numbers). If you use OpenAI-based embedders, please set the environment variable `OPENAI_API_KEY` to your OpenAI API key. Other open source embedders will be pulled from Huggingface and please be sure you have enough hardware resources (e.g., GPU) to run them. **If you change the embedding model, you must overwrite the existing data in `CORPUS_DB`**.
+
+   After ingestion, the data will be stored in the `CORPUS_DB` SQLite database.
+
+3. Manually set the labels for annotators to choose from in the `labels.yaml` file. Mercury supports hierarchical labels.
+
+4. Generate and set a JWT secret key: 
+   
+   ```export SECRET_KEY=$(openssl rand -base64 32)```
+   
+   You can rerun the command above to generate a new secret key when needed, especially when the old one is compromised. Note that changing the JWT token will log out all users. Optionally, you can also set `EXPIRE_MINUTES` to change the expiration time of the JWT token. The default is 7 days (10080 minutes).
+
+5. Start the Mercury annotation server: `python3 server.py --corpus_db {CORPUS_DB} --user_db {USER_DB}`. 
+
+   The server will run on `http://localhost:8000` by default. The default `USER_DB`, namely `users.sqlite`, is distributed with the code repo with the default Email and password as `test@example.com` and `test`, respectively, for log in. Of course, you can create new users. See the step below. 
+
+6. (Optional) Administer users. See `user_admin.py -h` or [user_admin.md](user_admin.md) for more details. 
+
+
+### Dumping annotations
 
 The annotations are stored in the `annotations` table in a SQLite database (hardcoded name `mercury.sqlite`). See the
 section [`annotations` table](#annotations-table-the-human-annotations) for the schema.
@@ -143,7 +177,7 @@ Mercury needs two SQLite databases, denoted as `MERCURY_DB`, which stores a corp
 - The column`user_name` in `users` table is not unique and are not used as part of login credentials. An annotator logs in using a combination of  `email` and `hashed_password`.
 - Password is hashed by `argon2` with parameters `time_cost=2, memory_cost=19456, parallelism=1`.
 
-#### Mercury main database (`MERCURY_DB`)
+#### Mercury main database (`CORPUS_DB`)
 
 Tables: `chunks`, `embeddings`, `annotations`, `config`.
 
@@ -214,8 +248,11 @@ For example:
 
 | key                | value                           |
 |--------------------|---------------------------------|
-| embdding_model     | "openai/text-embedding-3-small" |
-| embdding_dimension | 4                               |
+| embedding_model    | "openai/text-embedding-3-small" |
+| embedding_dimension| 4                               |
+| version            | "0.1.0"                         |
+| text_1_name        | "source"                        |
+| text_2_name        | "summary"                       |
 
 #### `sample_meta` table: the sample metadata
 

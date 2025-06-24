@@ -20,7 +20,7 @@ def serialize_f32(vector: List[float]) -> bytes:
     return struct.pack("%sf" % len(vector), *vector)
 
 class Embedder: 
-    def __init__(self, name: Literal['bge-small-en-v1.5', 'openai', 'all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1']) -> None:
+    def __init__(self, name: Literal['bge-small-en-v1.5', 'openai', 'all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1', 'dummy']) -> None:
         self.name = name 
         self.use_sentence_transformers = False
         if name in ['bge-small-en-v1.5']:
@@ -34,6 +34,8 @@ class Embedder:
             from sentence_transformers import SentenceTransformer
             self.model = SentenceTransformer(f'sentence-transformers/{name}')
             self.use_sentence_transformers = True
+        elif name == 'dummy':
+            pass
         else: 
             print (f"Unsupported embedder {name}. Please check. ")
             exit() 
@@ -70,11 +72,8 @@ class Ingester:
         file_to_ingest: str,
         overwrite_data: bool = False,
         embedding_dimension: int = 512,
-        # embedding_model_id: Literal["bge-m3", "bge-small-en-v1.5", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "multi-qa-mpnet-base-dot-v1", "dummy"] = "dummy",
         embedding_model_id: Literal["bge-small-en-v1.5", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "multi-qa-mpnet-base-dot-v1",'all-mpnet-base-v2', "dummy"] = "dummy",
         sqlite_db_path: str = "./mercury.sqlite",
-        ingest_column_1: str = "source",
-        ingest_column_2: str = "summary",
     ):
         self.file_to_ingest = file_to_ingest
         self.overwrite_data = overwrite_data
@@ -86,12 +85,9 @@ class Ingester:
             self.embedding_dimension = 768
         self.embedding_model_id = embedding_model_id
 
-        self.ingest_column_1 = ingest_column_1
-        self.ingest_column_2 = ingest_column_2
-
         self.chunker = Chunker()
         self.embedder = Embedder(embedding_model_id)
-        self.text = {}
+        self.text: Dict[str, List[str]] = {} # key as text column name, value as list of texts
 
     def prepare_db(self):
         self.db = sqlite3.connect(self.sqlite_db_path)
@@ -101,16 +97,23 @@ class Ingester:
 
         if self.overwrite_data:
             print ("\n************* BE CAREFUL *************")
-            print (f"By turning on --overwrite_data, you chooose to remove all data (chunks, embeddings, and annotations) in the database file `{self.sqlite_db_path}`. If you just wanna udpate one table/column, contact Forrest to migrate the data or add a new feature. Type UPPERCASE 'YES' if you still want to proceed.")
+            print (f"By turning on --overwrite_data, you chooose to remove all data (chunks, embeddings, and annotations) in the database file `{self.sqlite_db_path}`. Type UPPERCASE 'YES' if you still want to proceed.")
             answer = input()
             if answer == "YES":
                 self.db.execute("DROP TABLE IF EXISTS chunks")
-                self.db.execute("DROP TABLE IF EXISTS embeddings")
                 self.db.execute("DROP TABLE IF EXISTS config")
                 self.db.execute("DROP TABLE IF EXISTS annotations")
                 self.db.execute("DROP TABLE IF EXISTS leaderboard")
                 self.db.execute("DROP TABLE IF EXISTS users")
                 self.db.commit()
+
+        # if embedding model changes, we must re-embed the data
+        if not self.overwrite_data and self.embedding_model_id != self.db.execute("SELECT value FROM config WHERE key = 'embedding_model_id'").fetchone()[0]:
+            print (f"Embedding model in the CORPUS_DB {self.sqlite_db_path}: ", self.db.execute("SELECT value FROM config WHERE key = 'embedding_model_id'").fetchone()[0])
+            print ("Embedding model set by you: ", self.embedding_model_id)
+            print ("You changed the embedding model. Must re-embed the data. ")
+            self.db.execute("DROP TABLE IF EXISTS chunks")
+            self.db.commit()
 
         self.db.execute(
             f"CREATE VIRTUAL TABLE IF NOT EXISTS chunks USING vec0(chunk_id INTEGER PRIMARY KEY, text TEXT, text_type TEXT, sample_id INTEGER, char_offset INTEGER, chunk_offset INTEGER, embedding float[{self.embedding_dimension}])"
@@ -149,22 +152,27 @@ class Ingester:
             df = pandas.read_json(self.file_to_ingest, lines=True)
         elif self.file_to_ingest.endswith("json"):
             df = pandas.read_json(self.file_to_ingest)
-        elif self.file_to_ingest.endswith("csv"):
-            df = pandas.read_csv(self.file_to_ingest)
         else:
             raise Exception(f"Unsupported file format in {self.file_to_ingest}")
         
         df.columns = df.columns.str.lower()
+        [text_1_name, text_2_name] = df.columns[0:2]
+        self.text[text_1_name]: List[str] = df[text_1_name].tolist()
+        self.text[text_2_name]: List[str] = df[text_2_name].tolist()
 
-        sources: List[str] = df[self.ingest_column_1].tolist()
-        summaries: List[str] = df[self.ingest_column_2].tolist()
+        self.db.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES ('text_1_name', ?)",
+            [text_1_name]
+        )
+        self.db.execute(
+            "INSERT OR REPLACE INTO config (key, value) VALUES ('text_2_name', ?)",
+            [text_2_name]
+        )
+        self.db.commit()
 
-        self.text[self.ingest_column_1] = sources
-        self.text[self.ingest_column_2] = summaries
-
-        df_other_columns = df.drop(columns=[self.ingest_column_1, self.ingest_column_2])
+        df_other_columns = df.drop(columns=[text_1_name, text_2_name])
         if len(df_other_columns.columns) > 0:
-            sample_ids = range(0, len(sources))
+            sample_ids = range(0, len(self.text[text_1_name]))
             json_meta = [row.to_json() for _, row in df_other_columns.iterrows()]
             cmd = "INSERT INTO sample_meta (sample_id, json_meta) VALUES (?, ?)"
             self.db.executemany(cmd, zip(sample_ids, json_meta))
@@ -220,7 +228,7 @@ if __name__ == "__main__":
         "--embedding_model_id",
         type=str,
         default="dummy",
-        help="The ID of the embedding model to use. Currently supports 'all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1',  'bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}', and 'dummy' (random numbers).",
+        help="The ID of the embedding model to use. Currently supports 'all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1',  'bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}' (need to set env variables OPENAI_API_KEY), and 'dummy' (random numbers).",
     )
     parser.add_argument(
         "--embedding_dimension",
@@ -234,18 +242,6 @@ if __name__ == "__main__":
         default="./mercury.sqlite",
         help="The path to the SQLite database file",
     )
-    parser.add_argument(
-        "--ingest_column_1",
-        type=str,
-        default="source",
-        help="The name of the 1st column to ingest",
-    )
-    parser.add_argument(
-        "--ingest_column_2",
-        type=str,
-        default="summary",
-        help="The name of the 2nd column to ingest",
-    )
     parser.add_argument("--version", action="version", version="__version__")
 
     args = parser.parse_args()
@@ -257,9 +253,7 @@ if __name__ == "__main__":
         overwrite_data=args.overwrite_data,
         embedding_dimension=args.embedding_dimension,
         embedding_model_id=args.embedding_model_id,
-        sqlite_db_path=args.sqlite_db_path,
-        ingest_column_1=args.ingest_column_1,
-        ingest_column_2=args.ingest_column_2,
+        sqlite_db_path=args.sqlite_db_path
     )
     ingester.main()
 

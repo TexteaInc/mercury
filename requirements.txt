@@ -5,7 +5,7 @@ python-dotenv
 uvicorn
 pandas
 tqdm
-sqlite-vec
+sqlite-vec>=0.1.6
 sentence-transformers
 spacy
 openai
