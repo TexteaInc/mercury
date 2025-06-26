@@ -69,7 +69,7 @@ Mercury uses [`sqlite-vec`](https://github.com/asg017/sqlite-vec) to store and s
 
 2. Manually set the labels for annotators to choose from in the `labels.yaml` file. Mercury supports hierarchical labels.
 3. Generate and set a JWT secret key: `export SECRET_KEY=$(openssl rand -base64 32)`. You can rerun the command above to generate a new secret key when needed, especially when the old one is compromised. Note that changing the JWT token will log out all users. Optionally, you can also set `EXPIRE_MINUTES` to change the expiration time of the JWT token. The default is 7 days (10080 minutes).
-4. Start the Mercury annotation server: `python3 server.py --corpus_db {CORPUS_DB} --user_db {USER_DB}`.
+4. Start the Mercury annotation server: `python3 server.py [--corpus_db {CORPUS_DB} --user_db {USER_DB}]`.
 
    Be sure to set the candidate labels to choose from in the `labels.yaml` file. The server will run on `http://localhost:8000` by default. The default `USER_DB`, namely `users.sqlite`, is distributed with the code repo with the default Email and password as `test@example.com` and `test`, respectively.
 5. **Optional** To add/update/list users in a `USER_DB`, see [User administration in Mercury](user_admin.md) for more details.
@@ -113,6 +113,10 @@ The dumped human annotations are stored in a JSON format like this:
 ```
 
 You can view exported data in `http://[your_host]/viewer`
+
+### Docker
+
+To run Mercury in a Docker container, you can use the provided `docker-compose.yml` file, such as `docker compose -f 'docker-compose.yml' up -d --build 'mercury'`. Before running the Docker container, be sure to set up the secrets in the `secrets/` directory. Also, run the ingester and the server first, or copy `mercury.sqlite`, `users.sqlite`, and `labels.yaml` to the root directory.
 
 ### Migrating data from old version
 

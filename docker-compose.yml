@@ -8,12 +8,18 @@ services:
       - type: bind
         source: ./mercury.sqlite
         target: /app/mercury.sqlite
+        bind:
+          create_host_path: false
       - type: bind
         source: ./users.sqlite
         target: /app/users.sqlite
+        bind:
+          create_host_path: false
       - type: bind
         source: ./labels.yaml
         target: /app/labels.yaml
+        bind:
+          create_host_path: false
     ports:
       - "8000:8000"
     restart: unless-stopped
