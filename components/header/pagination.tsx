@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button"
+import { useTrackedEditorStore } from "@/store/useEditorStore"
 import { useTrackedIndexStore } from "@/store/useIndexStore"
 import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react"
 import { useEffect, useState } from "react"
 
 export default function Pagination() {
+  const editorStore = useTrackedEditorStore()
   const indexStore = useTrackedIndexStore()
   const [pageInput, setPageInput] = useState<string>(String(indexStore.index + 1))
   const [isEditing, setIsEditing] = useState<boolean>(false)
@@ -39,7 +41,16 @@ export default function Pagination() {
 
   return (
     <div className="flex gap-4">
-      <Button disabled={indexStore.index === 0} onClick={indexStore.previous} variant="outline" size="icon">
+      <Button
+        disabled={indexStore.index === 0}
+        onClick={() => {
+          editorStore.setWantToIgnoreResponse(true)
+          editorStore.setWantToReset(true)
+          indexStore.previous()
+        }}
+        variant="outline"
+        size="icon"
+      >
         <IconArrowLeft />
       </Button>
       <div className="flex items-center gap-1">
@@ -73,7 +84,16 @@ export default function Pagination() {
           {indexStore.max + 1}
         </span>
       </div>
-      <Button disabled={indexStore.index === indexStore.max} onClick={indexStore.next} variant="outline" size="icon">
+      <Button
+        disabled={indexStore.index === indexStore.max}
+        onClick={() => {
+          editorStore.setWantToIgnoreResponse(true)
+          editorStore.setWantToReset(true)
+          indexStore.next()
+        }}
+        variant="outline"
+        size="icon"
+      >
         <IconArrowRight />
       </Button>
     </div>

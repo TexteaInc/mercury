@@ -5,6 +5,7 @@ import Actions from "./actions"
 import Chat from "./chat"
 import Label from "./label"
 import Note from "./note"
+import ThreeInOne from "./three-in-one"
 
 interface BottomBarProps {
   type: "editing" | "viewing"
@@ -26,16 +27,18 @@ export default function BottomBar({ initialConsistent, initialNote, onConsistent
   const editorStore = useTrackedEditorStore()
   return (
     <ResizablePanelGroup direction="horizontal" className="border border-slate-200">
-      <ResizablePanel defaultSize={20}>
-        <Label initialData={initialConsistent} onResultChange={onConsistentChange} disabled={type === "viewing"} />
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={30}>
-        <Note initialNote={initialNote} onNoteChange={onNoteChange} disabled={type === "viewing"} />
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={20}>
-        <Actions onSubmit={onSubmitLabel} onDelete={onDeleteLabel} onReset={onResetEditor} onEdit={onEditLabel} type={type} />
+      <ResizablePanel defaultSize={70}>
+        <ThreeInOne
+          type={type}
+          initialConsistent={initialConsistent}
+          initialNote={initialNote}
+          onConsistentChange={onConsistentChange}
+          onNoteChange={onNoteChange}
+          onDeleteLabel={onDeleteLabel}
+          onEditLabel={onEditLabel}
+          onResetEditor={onResetEditor}
+          onSubmitLabel={onSubmitLabel}
+        />
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={30}>

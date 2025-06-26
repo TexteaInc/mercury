@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button"
-import { Window } from "@/components/ui/window"
 import { useTrackedEditorStore } from "@/store/useEditorStore"
 import { useTrackedUserStore } from "@/store/useUserStore"
 import { useMemo } from "react"
@@ -21,21 +20,19 @@ export default function Actions({ onSubmit, onDelete, onReset, onEdit, type }: A
   }, [editorStore.viewing, userStore.user])
 
   return (
-    <Window name="Actions">
-      <div className="flex gap-2">
-        <Button onClick={onReset} variant="outline">Reset</Button>
-        {type === "editing" && (
-          <>
-            <Button onClick={onSubmit} variant="outline">Submit</Button>
-          </>
-        )}
-        {type === "viewing" && (
-          <>
-            <Button onClick={onEdit} variant="outline" disabled={!editable}>Edit</Button>
-            <Button onClick={onDelete} variant="destructive" disabled={!editable}>Delete</Button>
-          </>
-        )}
-      </div>
-    </Window>
+    <div className="flex gap-2">
+      <Button onClick={onReset} variant="outline">Reset</Button>
+      {type === "editing" && (
+        <>
+          <Button onClick={onSubmit} variant="outline">Submit</Button>
+        </>
+      )}
+      {type === "viewing" && (
+        <>
+          <Button onClick={onEdit} variant="outline" disabled={!editable}>Edit</Button>
+          <Button onClick={onDelete} variant="destructive" disabled={!editable}>Delete</Button>
+        </>
+      )}
+    </div>
   )
 }

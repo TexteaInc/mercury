@@ -22,6 +22,12 @@ interface EditorState {
   activeList: Record<number, boolean>
   setActive: (recordId: number, active: boolean) => void
   setActiveBatch: (recordIds: number[], active: boolean) => void
+
+  wantToReset: boolean
+  setWantToReset: (wantToReset: boolean) => void
+
+  wantToIgnoreResponse: boolean
+  setWantToIgnoreResponse: (wantToIgnoreResponse: boolean) => void
 }
 
 export const useEditorStore = create<EditorState>()(set => ({
@@ -63,6 +69,12 @@ export const useEditorStore = create<EditorState>()(set => ({
         state.activeList[recordId] = active
       })
     })),
+
+  wantToReset: false,
+  setWantToReset: (wantToReset: boolean) => set({ wantToReset }),
+
+  wantToIgnoreResponse: false,
+  setWantToIgnoreResponse: (wantToIgnoreResponse: boolean) => set({ wantToIgnoreResponse }),
 }))
 
 export const useTrackedEditorStore = createTrackedSelector(useEditorStore)

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 interface CommentFormProps {
   newComment: string
@@ -19,11 +19,11 @@ export default function CommentForm({ newComment, onCommentChange, onSubmit, onC
       }}
       className="flex w-full space-x-2"
     >
-      <Input
+      <Textarea
         value={newComment}
         onChange={e => onCommentChange(e.target.value)}
         placeholder={isReplying ? "Type your reply..." : "Type a comment..."}
-        className="flex-grow"
+        className="flex-grow min-h-9 h-9"
         disabled={disabled}
       />
       <Button type="submit" disabled={disabled}>{isReplying ? "Reply" : "Send"}</Button>

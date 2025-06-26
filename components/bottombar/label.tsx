@@ -1,5 +1,4 @@
 import { Checkbox } from "@/components/ui/checkbox"
-import { Window } from "@/components/ui/window"
 import { useTrackedLabelsStore } from "@/store/useLabelsStore"
 import { produce } from "immer"
 import { useEffect, useMemo, useState } from "react"
@@ -134,20 +133,18 @@ export default function Label({ initialData, onResultChange, disabled = false }:
   }, [outerResult, innerResult, onResultChange])
 
   return (
-    <Window name="Label">
-      <div>
-        <Candidate candidate={outerCandidate} initialData={outerInitial} onResultChange={setOuterResult} prefix={null} disabled={disabled} />
-        {Object.entries(innerCandidate).map(([key, value]) => (
-          <Candidate
-            candidate={value}
-            initialData={innerInitial[key]}
-            onResultChange={result => handleInnerResultChange(key, result)}
-            prefix={key}
-            key={key}
-            disabled={disabled}
-          />
-        ))}
-      </div>
-    </Window>
+    <div>
+      <Candidate candidate={outerCandidate} initialData={outerInitial} onResultChange={setOuterResult} prefix={null} disabled={disabled} />
+      {Object.entries(innerCandidate).map(([key, value]) => (
+        <Candidate
+          candidate={value}
+          initialData={innerInitial[key]}
+          onResultChange={result => handleInnerResultChange(key, result)}
+          prefix={key}
+          key={key}
+          disabled={disabled}
+        />
+      ))}
+    </div>
   )
 }

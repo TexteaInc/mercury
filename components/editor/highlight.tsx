@@ -31,6 +31,7 @@ export default function Highlight({ id, text, highlights, pending, clickable, on
           start: previous.end,
           end: current.end,
           color: current.color,
+          score: current.score,
         })
       }
       const currentColor = Color(current.color)
@@ -40,28 +41,33 @@ export default function Highlight({ id, text, highlights, pending, clickable, on
           start: previous.start,
           end: current.start,
           color: previous.color,
+          score: previous.score,
         })
         copyHighlights.push({
           start: current.start,
           end: previous.end,
           color: mixedColor.hsl().string(),
+          score: current.score,
         })
       } else if (previous.start > current.start) {
         copyHighlights.push({
           start: current.start,
           end: previous.start,
           color: current.color,
+          score: current.score,
         })
         copyHighlights.push({
           start: previous.start,
           end: previous.end,
           color: mixedColor.hsl().string(),
+          score: current.score,
         })
       } else {
         noLapHighlights.push({
           start: previous.start,
           end: previous.end,
           color: mixedColor.hsl().string(),
+          score: current.score,
         })
       }
     } else {
@@ -82,14 +88,15 @@ export default function Highlight({ id, text, highlights, pending, clickable, on
     if (highlight.start > lastIndex) {
       segments.push(text.slice(lastIndex, highlight.start))
     }
+    const score = typeof highlight.score === "number" ? highlight.score.toFixed(3) : "N/A"
     if (clickable) {
       segments.push(
-        <span style={{ backgroundColor: highlight.color }} onClick={() => onClick(highlight.start, highlight.end)}>
+        <span style={{ backgroundColor: highlight.color }} title={score} onClick={() => onClick(highlight.start, highlight.end)}>
           {text.slice(highlight.start, highlight.end)}
         </span>,
       )
     } else {
-      segments.push(<span style={{ backgroundColor: highlight.color }}>{text.slice(highlight.start, highlight.end)}</span>)
+      segments.push(<span style={{ backgroundColor: highlight.color }} title={score}>{text.slice(highlight.start, highlight.end)}</span>)
     }
     lastIndex = highlight.end
   }

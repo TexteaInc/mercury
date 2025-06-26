@@ -162,6 +162,13 @@ export default function Editor() {
     setComments([])
   }
 
+  useEffect(() => {
+    if (editorStore.wantToReset) {
+      handleResetLabel()
+      editorStore.setWantToReset(false)
+    }
+  }, [editorStore.wantToReset])
+
   const handleSubmitLabel = useCallback(async () => {
     if (editorStore.viewing) {
       return
@@ -238,7 +245,11 @@ export default function Editor() {
         if (isRequestError(response)) {
           console.error(response.error)
         } else {
-          editorStore.setServerSection(response)
+          if (!editorStore.wantToIgnoreResponse) {
+            editorStore.setServerSection(response)
+          } else {
+            editorStore.setWantToIgnoreResponse(false)
+          }
         }
       })
     } else if (!selection.sourceSelection && selection.summarySelection) {
@@ -247,7 +258,11 @@ export default function Editor() {
         if (isRequestError(response)) {
           console.error(response.error)
         } else {
-          editorStore.setServerSection(response)
+          if (!editorStore.wantToIgnoreResponse) {
+            editorStore.setServerSection(response)
+          } else {
+            editorStore.setWantToIgnoreResponse(false)
+          }
         }
       })
     }

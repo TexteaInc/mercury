@@ -10,7 +10,6 @@ export default function Header() {
     <div className="bg-slate-50 flex gap-3 justify-between h-16 items-center w-auto px-4">
       <div className="flex gap-3 items-center">
         <Menu />
-        <Pagination />
         {editorStore.editing && (
           <p className="text-amber-600">
             Editing:
@@ -20,6 +19,7 @@ export default function Header() {
           </p>
         )}
       </div>
+      <Pagination />
       <User />
     </div>
   )

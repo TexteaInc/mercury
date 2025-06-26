@@ -119,4 +119,5 @@ export interface HighlightMeta {
   start: number
   end: number
   color: string
+  score: number
 }

@@ -87,6 +87,7 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
           start: section.offset,
           end: section.offset + section.len,
           color: getServerColor(section.score),
+          score: section.score,
         }))
     }
     if (editorStore.viewing) {

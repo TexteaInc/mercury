@@ -1,5 +1,4 @@
 import { Textarea } from "@/components/ui/textarea"
-import { Window } from "@/components/ui/window"
 
 interface NoteProps {
   initialNote: string
@@ -13,15 +12,13 @@ export default function Note({ initialNote = "", onNoteChange, disabled = false 
   }
 
   return (
-    <Window name="Note">
-      <div>
-        <Textarea
-          placeholder="Note"
-          onChange={e => onNoteChange(e.target.value)}
-          disabled={disabled}
-          defaultValue={initialNote}
-        />
-      </div>
-    </Window>
+    <div>
+      <Textarea
+        placeholder="Note"
+        onChange={e => onNoteChange(e.target.value)}
+        disabled={disabled}
+        defaultValue={initialNote}
+      />
+    </div>
   )
 }

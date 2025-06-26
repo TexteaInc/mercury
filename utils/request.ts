@@ -94,6 +94,12 @@ async function labelText(access_token: string, taskIndex: number, req: LabelRequ
   return data as Normal
 }
 
+async function exportFullLabels(): Promise<LabelData[]> {
+  const response = await fetch(`${backend}/labels`)
+  const data = await response.json()
+  return data as LabelData[]
+}
+
 async function exportLabel(access_token: string): Promise<LabelData[]> {
   const response = await fetch(`${backend}/user/export`, {
     headers: {
@@ -205,6 +211,7 @@ export {
   commitComment,
   deleteComment,
   deleteLabel,
+  exportFullLabels,
   exportLabel,
   getAllLabels,
   getAllTasksLength,
