@@ -575,7 +575,7 @@ class Database:
         new_results_nested = []
         for result in results_nested:
             sample_id = result["sample_id"]
-            new_results_nested.append(result | sample_meta_dict[sample_id])
+            new_results_nested.append(result | (sample_meta_dict[sample_id] if sample_id in sample_meta_dict else {}))
         results_nested = new_results_nested
 
         return results_nested
@@ -638,7 +638,7 @@ class Database:
         annotated_sample_ids = set()
         for result in results_nested:
             sample_id = result["sample_id"]
-            new_results_nested.append(result | sample_meta_dict[sample_id])
+            new_results_nested.append(result | (sample_meta_dict[sample_id] if sample_id in sample_meta_dict else {}))
             annotated_sample_ids.add(sample_id)
         for sample_id in sample_meta_dict:
             if sample_id not in annotated_sample_ids:
@@ -651,7 +651,7 @@ class Database:
                     full_texts[text_type] = " ".join(text)
                 sample_dict = {"sample_id": sample_id, ingest_column_1: full_texts[ingest_column_1], ingest_column_2: full_texts[ingest_column_2],
                                "annotations": []}
-                sample_dict.update(sample_meta_dict[sample_id])
+                sample_dict.update(sample_meta_dict[sample_id] if sample_id in sample_meta_dict else {})
                 new_results_nested.append(sample_dict)
 
         results_nested = new_results_nested
