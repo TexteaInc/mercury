@@ -39,7 +39,15 @@ export default function BottomBar({ initialConsistent, initialNote, onConsistent
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={30}>
-        <Chat labelId={editorStore.viewing?.record_id} comments={comments} onSubmit={onSubmitMessage} onEdit={onEditMessage} disabled={type === "editing"} onRefresh={onRefreshMessage} />
+        {
+          editorStore.viewing
+            ? (
+                <Chat labelId={editorStore.viewing.record_id} comments={comments} onSubmit={onSubmitMessage} onEdit={onEditMessage} disabled={type === "editing"} onRefresh={onRefreshMessage} />
+              )
+            : (
+                <Chat labelId={null} comments={[]} onSubmit={onSubmitMessage} onEdit={onEditMessage} disabled={type === "editing"} onRefresh={onRefreshMessage} />
+              )
+        }
       </ResizablePanel>
     </ResizablePanelGroup>
   )
