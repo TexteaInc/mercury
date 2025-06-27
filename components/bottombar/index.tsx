@@ -1,10 +1,7 @@
 import type { Comment, CommentData } from "@/utils/types"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { useTrackedEditorStore } from "@/store/useEditorStore"
-import Actions from "./actions"
 import Chat from "./chat"
-import Label from "./label"
-import Note from "./note"
 import ThreeInOne from "./three-in-one"
 
 interface BottomBarProps {
