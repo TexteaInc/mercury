@@ -54,7 +54,7 @@ export default function CommentItem({
                     )
                   : (
                       <>
-                        <QuotedText text={comment.text} />
+                        <QuotedText text={comment.text} textId={comment.comment_id} parentId={comment.parent_id} />
                       </>
                     )}
               </div>
