@@ -20,35 +20,28 @@ def serialize_f32(vector: List[float]) -> bytes:
     return struct.pack("%sf" % len(vector), *vector)
 
 class Embedder: 
-    def __init__(self, name: Literal['bge-small-en-v1.5', 'openai', 'all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1', 'dummy']) -> None:
-        self.name = name 
-        self.use_sentence_transformers = False
-        if name in ['bge-small-en-v1.5']:
+    def __init__(self, model_id: Literal['BAAI/bge-small-en-v1.5', 'openai/text-embedding-3-small', 'openai/text-embedding-3-large', 'sentence-transformers/all-mpnet-base-v2', 'sentence-transformers/multi-qa-mpnet-base-dot-v1', 'dummy']) -> None:
+        self.model_id = model_id 
+        if model_id in ['BAAI/bge-small-en-v1.5', 'sentence-transformers/multi-qa-mpnet-base-dot-v1', 'sentence-transformers/all-mpnet-base-v2']:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(f'BAAI/{name}')
+            self.model = SentenceTransformer(model_id)
             self.use_sentence_transformers = True
-        elif 'openai' in name:
+        elif model_id in ['openai/text-embedding-3-small', 'openai/text-embedding-3-large']:
             from openai import OpenAI
             self.model = OpenAI()
-        elif name in ['multi-qa-mpnet-base-dot-v1', 'all-mpnet-base-v2']:
-            from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(f'sentence-transformers/{name}')
-            self.use_sentence_transformers = True
-        elif name == 'dummy':
+        elif model_id == 'dummy':
             pass
         else: 
-            print (f"Unsupported embedder {name}. Please check. ")
+            print (f"Unsupported embedder {model_id}. Please check. ")
             exit() 
     
     def embed(self, texts: List[str], embedding_dimension: int= 512,  batch_size:int = 12) -> np.ndarray:
         """The function that takes a list of strings and returns a numpy array of their embeddings.
         """
-        if self.use_sentence_transformers:
+        if self.model_id in ['BAAI/bge-small-en-v1.5', 'sentence-transformers/multi-qa-mpnet-base-dot-v1', 'sentence-transformers/all-mpnet-base-v2']:
             return self.model.encode(texts, batch_size=batch_size, normalize_embeddings=True)
-        # elif self.name == 'bge-m3':
-        #     return self.model.encode(texts, batch_size=batch_size, max_length=512)['dense_vecs']
-        elif "openai" in self.name:
-            openai_model_id = self.name.split("/")[-1]
+        elif self.model_id in ['openai/text-embedding-3-small', 'openai/text-embedding-3-large']:
+            openai_model_id = self.model_id.split("/")[-1]
             response  = self.model.embeddings.create(input=texts, model=openai_model_id, dimensions=int(embedding_dimension))
             return np.array([item.embedding for item in response.data])
         else:
@@ -72,17 +65,22 @@ class Ingester:
         file_to_ingest: str,
         overwrite_data: bool = False,
         embedding_dimension: int = 512,
-        embedding_model_id: Literal["bge-small-en-v1.5", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "multi-qa-mpnet-base-dot-v1",'all-mpnet-base-v2', "dummy"] = "dummy",
+        embedding_model_id: Literal["BAAI/bge-small-en-v1.5", "openai/text-embedding-3-small", "openai/text-embedding-3-large", "sentence-transformers/multi-qa-mpnet-base-dot-v1", "sentence-transformers/all-mpnet-base-v2", "dummy"] = "dummy",
         sqlite_db_path: str = "./mercury.sqlite",
     ):
         self.file_to_ingest = file_to_ingest
         self.overwrite_data = overwrite_data
         self.sqlite_db_path = sqlite_db_path
-        self.embedding_dimension = embedding_dimension
-        if embedding_model_id == "bge-small-en-v1.5":
+
+        self.embedding_dimension = embedding_dimension # only for openai models can you adjust the embedding dimension
+        if embedding_model_id == "BAAI/bge-small-en-v1.5":
             self.embedding_dimension = 384
-        elif embedding_model_id in ['all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1']:
+        elif embedding_model_id in ['sentence-transformers/all-mpnet-base-v2', 'sentence-transformers/multi-qa-mpnet-base-dot-v1']:
             self.embedding_dimension = 768
+        elif embedding_model_id in ['openai/text-embedding-3-small', 'openai/text-embedding-3-large']:
+            if embedding_dimension > 8_192:
+                raise ValueError("OpenAI models only support up to 8192 dimensions")
+            
         self.embedding_model_id = embedding_model_id
 
         self.chunker = Chunker()
@@ -90,6 +88,8 @@ class Ingester:
         self.text: Dict[str, List[str]] = {} # key as text column name, value as list of texts
 
     def prepare_db(self):
+        first_time = not os.path.exists(self.sqlite_db_path)
+
         self.db = sqlite3.connect(self.sqlite_db_path)
         self.db.enable_load_extension(True)
         sqlite_vec.load(self.db)
@@ -108,7 +108,7 @@ class Ingester:
                 self.db.commit()
 
         # if embedding model changes, we must re-embed the data
-        if not self.overwrite_data and self.embedding_model_id != self.db.execute("SELECT value FROM config WHERE key = 'embedding_model_id'").fetchone()[0]:
+        if not first_time and not self.overwrite_data and self.embedding_model_id != self.db.execute("SELECT value FROM config WHERE key = 'embedding_model_id'").fetchone()[0]:
             print (f"Embedding model in the CORPUS_DB {self.sqlite_db_path}: ", self.db.execute("SELECT value FROM config WHERE key = 'embedding_model_id'").fetchone()[0])
             print ("Embedding model set by you: ", self.embedding_model_id)
             print ("You changed the embedding model. Must re-embed the data. ")
@@ -176,7 +176,7 @@ class Ingester:
 
         df_other_columns = df.drop(columns=[text_1_name, text_2_name])
         if len(df_other_columns.columns) > 0:
-            sample_ids = range(0, len(self.text[text_1_name]))
+            sample_ids = range(0, len(self.text["text_1"]))
             json_meta = [row.to_json() for _, row in df_other_columns.iterrows()]
             cmd = "INSERT INTO sample_meta (sample_id, json_meta) VALUES (?, ?)"
             self.db.executemany(cmd, zip(sample_ids, json_meta))
@@ -226,25 +226,25 @@ if __name__ == "__main__":
         "--overwrite_data",
         action="store_true",
         default=False,
-        help="If True, overwrite the data store in database. If False (default), append to the existing data.",
+        help="If True, overwrite the $CORPUS_DB. If False (default), append to the existing data.",
     )
     parser.add_argument(
         "--embedding_model_id",
         type=str,
         default="dummy",
-        help="The ID of the embedding model to use. Currently supports 'all-mpnet-base-v2', 'multi-qa-mpnet-base-dot-v1',  'bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}' (need to set env variables OPENAI_API_KEY), and 'dummy' (random numbers).",
+        help="The ID of the embedding model to use. Currently supports 'sentence-transformers/all-mpnet-base-v2', 'sentence-transformers/multi-qa-mpnet-base-dot-v1',  'BAAI/bge-small-en-v1.5', 'openai/{text-embedding-3-small, text-embedding-3-large}' (need to set env variables OPENAI_API_KEY), and 'dummy' (random numbers).",
     )
     parser.add_argument(
         "--embedding_dimension",
         type=int,
         default=512,
-        help="The dimension of the embeddings. Only effective to OpenAI embedders.",
+        help="The dimension of the embeddings. Only effective on OpenAI embedders. For OpenAI models, it cannot be larger than 8192.",
     )
     parser.add_argument(
-        "--sqlite_db_path",
+        "--corpus_db",
         type=str,
         default="./mercury.sqlite",
-        help="The path to the SQLite database file",
+        help="The path to the CORPUS_DB file",
     )
     parser.add_argument("--version", action="version", version="__version__")
 
