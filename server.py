@@ -3,7 +3,7 @@ import os
 import sys
 import uuid
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal, List, Dict
 import struct
 
 import uvicorn
@@ -57,15 +57,24 @@ class Label(BaseModel):
     consistent: list[str]
     note: str
 
+class Annotation(BaseModel): # introduced by Forrest, July 1, 2025
+    text1_start: int
+    text1_end: int
+    text2_start: int
+    text2_end: int
+    labels: list[str]
+    note: str
+
 
 class Selection(BaseModel):
     start: int
     end: int
-    from_summary: bool
+    text_type: Literal["text1", "text2"]
 
 
-class Name(BaseModel):
-    name: str
+# Disabled by Forrest, July 1, 2025
+# class Name(BaseModel):
+#     name: str
 
 
 class Token(BaseModel):
@@ -104,7 +113,7 @@ class Config(BaseModel):
 def get_config():
     raise NotImplementedError("This should be overridden.")
 
-
+# FIXME: Why is the line below in the middle of function definitions?
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
@@ -118,6 +127,9 @@ def create_access_token(data: dict, secret_key: str, expires_delta: timedelta | 
     encoded_jwt = jwt.encode(to_encode, secret_key, algorithm="HS256")
     return encoded_jwt
 
+@app.get("/login")
+async def login():
+    return FileResponse("dist/login.html")
 
 @app.post("/login")
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -133,7 +145,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     return Token(access_token=access_token, token_type="bearer")
 
 
-@app.get("/candidate_labels")
+@app.get("/labels")
 async def get_labels() -> list:  # get all candidate labels for human annotators to choose from
     with open("labels.yaml") as f:
         labels = yaml.safe_load(f)
@@ -159,126 +171,118 @@ async def get_user(token: Annotated[str, Depends(oauth2_scheme)], config: Config
         raise credentials_exception
     return User(id=user[0], name=user[1], email=user[2])
 
-
-@app.post("/user/name")
-async def update_user_name(name: Name, user: Annotated[User, Depends(get_user)]):
-    database.change_user_name(user.id, name.name)
+@app.patch("/user/{user_id}/name")
+async def update_user_name(user_id: str, name: str):
+    database.change_user_name(user_id, name)
     return {"message": "success"}
 
 
-@app.get("/user/export")  # please update the route name to be more meaningful, e.g., /user/export_user_data
-async def export_user_data(user: Annotated[User, Depends(get_user)]):
-    return database.dump_annotator_labels(user.id)
+@app.get("/user/{user_id}/annotations")
+async def export_annotations(user_id: str):
+    return database.dump_annotations_of_user(user_id)
 
 
-@app.get("/task")
-async def get_tasks_length():
-    return {"all": len(tasks)}
+@app.get("/samples")
+async def get_num_samples():
+    return {"num_samples": len(samples)}
 
 
-@app.get("/task/{task_index}")
-async def get_task(task_index: int = 0):
-    if task_index >= len(tasks):
-        return {"error": "Invalid task index"}
-    task = tasks[task_index]
-    return {"doc": task["source"], "sum": task["summary"]}
+@app.get("/sample/{sample_id}")
+async def get_sample(sample_id: int):
+    if sample_id >= len(samples):
+        return {"error": "Invalid sample index"}
+    sample = samples[sample_id]
+    return {"text1": sample["text1"], "text2": sample["text2"]}
 
 
-@app.get("/task/{task_index}/history")
-async def get_task_history(task_index: int, _: Annotated[User, Depends(get_user)]):
-    return database.export_task_history(task_index)
+@app.get("/sample/{sample_id}/history")
+async def get_sample_history(sample_id: int, _: Annotated[User, Depends(get_user)]):
+    return database.export_sample_history(sample_id)
+
+@app.get("/sample/{sample_id}/complimentary_annotations/{user_id}")
+async def get_other_annotations(sample_id: int, user_id: str):
+    """Get the annotations of other annotators for the sample."""
+    return database.get_others_annotations(user_id, sample_id)
 
 
-@app.get("/task/{task_index}/other/annotations")
-async def get_other_annotations(task_index: int, user: Annotated[User, Depends(get_user)]):
-    return database.get_others_annotation(user.id, task_index)
-
-
-@app.post("/task/{task_index}/label")
-async def post_task(task_index: int, label: Label, user: Annotated[User, Depends(get_user)]):
-    # label_data = LabelData(
-    #     record_id="not assigned",
-    #     sample_id=tasks[task_index]["_id"],
-    #     summary_start=label.summary_start,
-    #     summary_end=label.summary_end,
-    #     source_start=label.source_start,
-    #     source_end=label.source_end,
-    #     consistent=label.consistent,
-    #     task_index=task_index,
-    #     user_id=user_key,
-    # )
-
-    sample_id = task_index
+@app.post("/sample/{sample_id}/annot")
+async def push_annotation(sample_id: int, annot: Annotation, user: Annotated[User, Depends(get_user)]):
+    """
+    Add a new annotation to the sample.
+    """
+    sample_id = sample_id
     annot_spans = {}
-    if label.summary_start != -1:
-        annot_spans["summary"] = (label.summary_start, label.summary_end)
-    if label.source_start != -1:
-        annot_spans["source"] = (label.source_start, label.source_end)
+    if annot.text1_start != -1:
+        annot_spans["text1"] = (annot.text1_start, annot.text1_end)
+    if annot.text2_start != -1:
+        annot_spans["text2"] = (annot.text2_start, annot.text2_end)
 
     annotator = user.id
 
-    label_string = json.dumps(label.consistent)
+    label_string = json.dumps(annot.labels)
 
     database.push_annotation({
         "sample_id": sample_id,
         "annotator": annotator,
         "label": label_string,
         "annot_spans": annot_spans,
-        "note": label.note
-    })  # the label_data is in databse.OldLabelData format
+        "note": annot.note
+    })
     return {"message": "success"}
 
 
-@app.patch("/task/{task_index}/label/{record_id}")
-async def patch_task(task_index: int, record_id: int, label: Label, user: Annotated[User, Depends(get_user)]):
-    sample_id = task_index
+@app.patch("/sample/{sample_id}/annot/{annot_id}")
+async def update_annotation(sample_id: int, annot_id: int, annot: Annotation, user: Annotated[User, Depends(get_user)]):
+    """
+    Update an existing annotation.
+    """
+    sample_id = sample_id
     annot_spans = {}
-    if label.summary_start != -1:
-        annot_spans["summary"] = (label.summary_start, label.summary_end)
-    if label.source_start != -1:
-        annot_spans["source"] = (label.source_start, label.source_end)
+    if annot.text1_start != -1:
+        annot_spans["text1"] = (annot.text1_start, annot.text1_end)
+    if annot.text2_start != -1:
+        annot_spans["text2"] = (annot.text2_start, annot.text2_end)
 
     annotator = user.id
 
-    label_string = json.dumps(label.consistent)
+    label_string = json.dumps(annot.labels)
 
     database.update_annotation({
-        "record_id": record_id,
+        "annot_id": annot_id,
         "sample_id": sample_id,
         "annotator": annotator,
         "label": label_string,
         "annot_spans": annot_spans,
-        "note": label.note
+        "note": annot.note
     })
     return {"message": "success"}
+
+@app.delete("/sample/{sample_id}/annot/{annot_id}")
+async def delete_annotation(sample_id: int, annot_id: int, user: Annotated[User, Depends(get_user)]):
+    database.delete_annotation(annot_id, user.id)
+    return {"message": f"annotation {annot_id} deleted"}
 
 def break_into_n_grams(text: str, n: int = 5):
     return [text[i:i + n] for i in range(0, len(text), n)]
 
-@app.post(
-    "/task/{task_index}/select")  # TODO: to be updated by Forrest using openAI's API or local model to embed text on the fly
-async def post_selections(task_index: int, selection: Selection):
-    if task_index >= len(tasks):
-        return {"error": "Invalid task index"}
-    if task_index < 0:
-        return {"error": "Invalid task index"}
-    # use_id = source_corpus_id if selection.from_summary else summary_corpus_id
+@app.post("/sample/{sample_id}/query")
+async def search(sample_id: int, selection: Selection):
+    """
+    Search for the most similar chunks in the database.
+    """
+    if sample_id >= len(samples) or sample_id < 0:
+        return {"error": "Invalid sample index"}
     query = (
-        tasks[task_index]["source"][selection.start: selection.end]
-        if not selection.from_summary
-        else tasks[task_index]["summary"][selection.start: selection.end]
+        samples[sample_id][selection.text_type][selection.start: selection.end]
     )
-    id_ = tasks[task_index]["_id"]
+    # id_ = samples[sample_id]["_id"]
 
     # first embedd query
     embedding = embedder.embed([query], embedding_dimension=configs["embedding_dimension"])[0]
 
     # Then get the chunk_id's from the opposite document
     # sql_cmd = "SELECT chunk_id, text FROM chunks WHERE text_type = ? AND sample_id = ?"
-    if selection.from_summary:
-        text_type = "source"
-    else:
-        text_type = "summary"
+    opposite_text_type = {"text1": "text2", "text2": "text1"}[selection.text_type]
 
     # chunk_id_and_text = database.mercury_db.execute(sql_cmd, [text_type, task_index]).fetchall()
     # search_chunk_ids = [row[0] for row in chunk_id_and_text]
@@ -305,7 +309,7 @@ async def post_selections(task_index: int, selection: Selection):
     #           "AND embedding MATCH '{1}'  \
     #           ORDER BY distance \
     #           LIMIT 5;".format(', '.join(vecter_db_row_ids), embedding)
-    sql_cmd = f"SELECT chunk_id, distance FROM chunks WHERE k =5 AND sample_id = {task_index} AND text_type = '{text_type}' AND embedding MATCH '{embedding}' ORDER BY distance"
+    sql_cmd = f"SELECT chunk_id, distance FROM chunks WHERE k =5 AND sample_id = {sample_index} AND text_type = '{opposite_text_type}' AND embedding MATCH '{embedding}' ORDER BY distance"
     # TODO: Please allow users to select k value via a sliding bar
     # print ("SQL_CMD", sql_cmd)
 
@@ -384,14 +388,14 @@ async def get_comments(annot_index: int):
         })
     return comments_data
 
-
+# FIXME: Should the URL be /sample/{sample_id}/annot/{annot_id}/comments?
 @app.post("/annot/{annot_index}/comments")
 async def post_comments(annot_index: int, comment: CommentData, user: Annotated[User, Depends(get_user)]):
     database.commit_comment(user.id, annot_index, comment.parent_id, comment.text)
     return {"message": "success"}
 
 
-@app.delete("/annot/{annot_index}/comments/{comment_id}")
+@app.delete("/annot/{annot_index}/comment/{comment_id}")
 async def delete_comments(annot_index: int, comment_id: int, user: Annotated[User, Depends(get_user)]):
     comment = database.get_comment_by_id(comment_id)
     if comment[1] != user.id or comment[2] != annot_index:
@@ -400,7 +404,7 @@ async def delete_comments(annot_index: int, comment_id: int, user: Annotated[Use
     return {"message": "success"}
 
 
-@app.patch("/annot/{annot_index}/comments/{comment_id}")
+@app.patch("/annot/{annot_index}/comment/{comment_id}")
 async def patch_comments(annot_index: int, comment_id: int, comment: CommentData,
                          user: Annotated[User, Depends(get_user)]):
     target = database.get_comment_by_id(comment_id)
@@ -410,15 +414,9 @@ async def patch_comments(annot_index: int, comment_id: int, comment: CommentData
     return {"message": "success"}
 
 
-@app.delete("/record/{record_id}")
-async def delete_annotation(record_id: str, user: Annotated[User, Depends(get_user)]):
-    database.delete_annotation(record_id, user.id)
-    return {"message": f"delete anntation {record_id} success"}
-
-
-@app.get("/labels")
-async def get_labels():
-    return database.dump_annotation(dump_file=None)
+@app.get("/annots")
+async def get_annotations():
+    return database.dump_annotations(dump_file=None)
 
 
 @app.get("/history")  # redirect route to history.html
@@ -429,11 +427,6 @@ async def history():
 @app.get("/viewer")
 async def viewer():
     return FileResponse("dist/viewer.html")
-
-
-@app.get("/login")
-async def login():
-    return FileResponse("dist/login.html")
 
 
 if __name__ == "__main__":
@@ -462,8 +455,7 @@ if __name__ == "__main__":
     database = Database(args.mercury_db, args.user_db)
     app.dependency_overrides[get_config] = lambda: env_config
 
-    # TODO: the name 'tasks' can be misleading. It should be changed to something more descriptive.
-    tasks = database.fetch_data_for_labeling()
+    samples = database.fetch_data_for_labeling()
     configs = database.fetch_configs()
     embedder = Embedder(configs["embedding_model_id"])
 

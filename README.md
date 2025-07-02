@@ -60,8 +60,8 @@ Therefore, Mercury is very efficient for the labeling of NLP tasks that involve 
 
 Mercury stores and loads data from two SQLite databases:
 
-1. `CORPUS_DB`: the corpus and annotations (if annotated)
-2. `USER_DB`: the ID and authentication info of annotators
+1. `CORPUS_DB` (default: `mercury.sqlite`): the corpus and annotations (if annotated)
+2. `USER_DB` (default: `users.sqlite`): the ID and authentication info of annotators
 
 You can pair the same `USER_DB` with multiple `CORPUS_DB`s for the same group of users to annotate different corpora.
 

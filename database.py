@@ -28,8 +28,8 @@ class OldLabelData(TypedDict):  # readable by frontend
 
 
 class AnnotSpan(TypedDict):  # In future expansion, the fields can be any user-defined fields
-    source: tuple[int, int]  # optional
-    summary: tuple[int, int]
+    text1: tuple[int, int]  # optional
+    text2: tuple[int, int]
 
 
 class LabelData(TypedDict):  # human annotation on a sample
