@@ -1,28 +1,28 @@
-export type Task = {
-  doc: string
-  sum: string
+export interface Sample {
+  text1: string
+  text2: string
 }
 
-export type AllTasksLength = {
-  all: number
+export interface AllTasksLength {
+  num_samples: number
 }
 
-export type LabelRequest = {
-  summary_start: number
-  summary_end: number
-  source_start: number
-  source_end: number
-  consistent: string[]
+export interface LabelRequest {
+  text1_start: number
+  text1_end: number
+  text2_start: number
+  text2_end: number
+  labels: string[]
   note: string
 }
 
-export type SelectionRequest = {
+export interface SelectionRequest {
   start: number
   end: number
-  from_summary: boolean
+  text_type: "text1" | "text2"
 }
 
-export type SectionResponseSlice = {
+export interface SectionResponseSlice {
   score: number
   offset: number
   len: number
@@ -31,7 +31,7 @@ export type SectionResponseSlice = {
 
 export type SectionResponse = SectionResponseSlice[]
 
-export type ServerSection = {
+export interface ServerSection {
   score: number
   offset: number
   len: number
@@ -55,7 +55,7 @@ export function mixedToBoolean(checked: "mixed" | boolean): boolean {
   return checked
 }
 
-export type RequestError = {
+export interface RequestError {
   error: string
 }
 
@@ -64,15 +64,15 @@ export function isRequestError(obj: any): obj is RequestError {
 }
 
 export function handleRequestError(e: RequestError) {
-  throw Error(e.error)
+  throw new Error(e.error)
 }
 
-export type Normal = {
+export interface Normal {
   message: string
 }
 
-export type LabelData = {
-  record_id: string
+export interface LabelData {
+  record_id: number
   sample_id: string
   summary_start: number
   summary_end: number
@@ -81,19 +81,19 @@ export type LabelData = {
   consistent: string[]
   task_index: number
   user_id: string
-  note: string,
-  username?: string,
+  note: string
+  username?: string
 }
 
-export type User = {
+export interface User {
   id: string
   name: string
   email: string
 }
 
-export type Comment = {
+export interface Comment {
   comment_id: number
-  user_id: number
+  user_id: string
   username: string
   annot_id: number
   parent_id: number | null
@@ -101,16 +101,23 @@ export type Comment = {
   comment_time: string
 }
 
-export type CommentData = {
+export interface CommentData {
   annot_id: number
   parent_id: number | null
   text: string
 }
 
-export function isNumber(value: unknown)  {
+export function isNumber(value: unknown) {
   return typeof value === "number" && !Number.isNaN(value)
 }
 
 export function isSafeNumber(value: unknown) {
   return isNumber(value) ? (value as number) >= 0 : false
+}
+
+export interface HighlightMeta {
+  start: number
+  end: number
+  color: string
+  score: number
 }

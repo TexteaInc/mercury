@@ -241,7 +241,7 @@ if __name__ == "__main__":
         help="The dimension of the embeddings. Only effective on OpenAI embedders. For OpenAI models, it cannot be larger than 8192.",
     )
     parser.add_argument(
-        "--corpus_db",
+        "--sqlite_db_path",
         type=str,
         default="./mercury.sqlite",
         help="The path to the CORPUS_DB file",

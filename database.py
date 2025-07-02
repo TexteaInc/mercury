@@ -168,8 +168,8 @@ class Database:
             print("Cannot find Mercury version in the database. Please migrate the database.")
             exit(1)
         elif version[0] != __version__:
-                print (f"Mercury version mismatch between the code and the database file. The version in the database is {version[0]}, but the code version is {__version__}. Please migrate the database.")
-                exit(1)
+            print (f"Mercury version mismatch between the code and the database file. The version in the database is {version[0]}, but the code version is {__version__}. Please migrate the database.")
+            exit(1)
         mercury_db.execute("CREATE TABLE IF NOT EXISTS annotations (\
                    annot_id INTEGER PRIMARY KEY AUTOINCREMENT, \
                    sample_id INTEGER, \
@@ -268,12 +268,11 @@ class Database:
                 }
             }
         """
-
         data_for_labeling = [
             {
                 "_id": str(sample_id),
-                "source": " ".join(sectioned_chunks[sample_id]["source"].values()),
-                "summary": " ".join(sectioned_chunks[sample_id]["summary"].values())
+                "source": " ".join(sectioned_chunks[sample_id]["text_1"].values()),
+                "summary": " ".join(sectioned_chunks[sample_id]["text_2"].values())
             }
             for sample_id in sectioned_chunks
         ]
@@ -297,7 +296,7 @@ class Database:
         data_for_labeling.sort(key=lambda x: int(x["_id"]))
 
         return data_for_labeling
-    
+
     @database_lock()
     def get_annotation_comments(self, annot_id: int):
         sql_cmd = "SELECT * FROM comments WHERE annot_id = ?"
@@ -305,14 +304,12 @@ class Database:
         comments = res.fetchall()
         return comments
 
-
     @database_lock()
     def get_comment_by_id(self, comment_id: int):
         sql_cmd = "SELECT * FROM comments WHERE comment_id = ?"
         res = self.mercury_db.execute(sql_cmd, (comment_id,))
         comment = res.fetchone()
         return comment
-
 
     @database_lock()
     def commit_comment(self, user_id: str, annot_id: int, parent_id: int | None, text: str):
@@ -341,7 +338,6 @@ class Database:
         sql_cmd = "UPDATE comments SET text = ? WHERE comment_id = ?"
         self.mercury_db.execute(sql_cmd, (text, comment_id))
         self.mercury_db.commit()
-
 
     @database_lock()
     def delete_comment(self, user_id: str, comment_id: int):

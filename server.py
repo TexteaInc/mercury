@@ -110,6 +110,10 @@ class Config(BaseModel):
     expire: int
 
 
+class Name(BaseModel):
+    name: str
+
+
 def get_config():
     raise NotImplementedError("This should be overridden.")
 
@@ -171,15 +175,19 @@ async def get_user(token: Annotated[str, Depends(oauth2_scheme)], config: Config
         raise credentials_exception
     return User(id=user[0], name=user[1], email=user[2])
 
-@app.patch("/user/{user_id}/name")
-async def update_user_name(user_id: str, name: str):
-    database.change_user_name(user_id, name)
+
+@app.post("/user/name")
+async def update_user_name(name: Name, user: Annotated[User, Depends(get_user)]):
+    database.change_user_name(user.id, name.name)
     return {"message": "success"}
 
 
-@app.get("/user/{user_id}/annotations")
-async def export_annotations(user_id: str):
-    return database.dump_annotations_of_user(user_id)
+@app.get(
+    "/user/export"
+)  # please update the route name to be more meaningful, e.g., /user/export_user_data
+async def export_user_data(user: Annotated[User, Depends(get_user)]):
+    return database.dump_annotator_labels(user.id)
+
 
 
 @app.get("/samples")

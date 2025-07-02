@@ -1,61 +1,52 @@
 "use client"
 
-import {
-  Button,
-  Field,
-  Input,
-  makeResetStyles,
-  Title1, Toast, Toaster, ToastTitle,
-  tokens,
-  useId,
-  useToastController,
-} from "@fluentui/react-components"
-import { login } from "../../utils/request"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+import { useTrackedUserStore } from "@/store/useUserStore"
+import { login } from "@/utils/request"
 import { useRouter } from "next/navigation"
-
-const useStackClassName = makeResetStyles({
-  display: "flex",
-  flexDirection: "column",
-  maxWidth: "350px",
-  rowGap: tokens.spacingVerticalL,
-})
 
 export default function Login() {
   const router = useRouter()
-  const toasterId = useId("toaster")
-  const { dispatchToast } = useToastController(toasterId)
+  const { toast } = useToast()
+  const userStore = useTrackedUserStore()
 
-  async function formAction(formData) {
-    if (formData.get("email") && formData.get("password")) {
-      const success = await login(formData.get("email"), formData.get("password"))
-      if (success) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+
+    if (email && password) {
+      const accessToken = await login(email, password)
+      if (accessToken) {
+        userStore.setAccessToken(accessToken)
         router.push("/")
       } else {
-        dispatchToast(
-            <Toast>
-              <ToastTitle>User does not exist or mismatched email and password</ToastTitle>
-            </Toast>,
-            { position: "bottom-start", intent: "error" },
-        )
+        toast({
+          title: "Login Error",
+          description: "User does not exist or mismatched email and password",
+          variant: "destructive",
+        })
       }
     }
   }
 
   return (
-      <>
-        <Toaster toasterId={toasterId} />
-        <Title1>Login</Title1>
-        <form className={useStackClassName()} action={formAction}>
-          <Field label="Email" required>
-            <Input name="email" />
-          </Field>
-          <Field label="Password" required>
-            <Input name="password" />
-          </Field>
-          <Button appearance="primary" type="submit">
-            Login
-          </Button>
-        </form>
-      </>
+    <div className="container mx-auto p-4 max-w-sm">
+      <h1 className="text-3xl font-bold mb-4">Login</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium">Email</label>
+          <Input id="email" name="email" type="email" required className="mt-1 block w-full" />
+        </div>
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium">Password</label>
+          <Input id="password" name="password" type="password" required className="mt-1 block w-full" />
+        </div>
+        <Button type="submit" className="w-full">Login</Button>
+      </form>
+    </div>
   )
 }
