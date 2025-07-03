@@ -10,7 +10,7 @@ import Highlight from "./highlight"
 import "rangy/lib/rangy-textrange"
 
 interface EditorPanelProps {
-  docType: "summary" | "source"
+  docType: "text1" | "text2"
   type: "editing" | "viewing"
   text: string
   pending: boolean
@@ -49,7 +49,7 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
     const selection = {
       start,
       end,
-      text_type: docType === "summary" ? "text2" : "text1" as "text1" | "text2",
+      text_type: docType,
     }
     setSelection(selection)
     onSelectionChange(selection)
@@ -63,7 +63,7 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
     const selection = {
       start,
       end,
-      text_type: docType === "summary" ? "text2" : "text1" as "text1" | "text2",
+      text_type: docType,
     }
     setSelection(selection)
     onSelectionChange(selection)
@@ -82,7 +82,7 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
     }
     if (editorStore.serverSection.length > 0) {
       return editorStore.serverSection
-        .filter(section => section.to_doc === (docType === "source"))
+        .filter(section => section.text_type === docType)
         .map(section => ({
           start: section.offset,
           end: section.offset + section.len,
@@ -91,8 +91,8 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
         }))
     }
     if (editorStore.viewing) {
-      const start = docType === "summary" ? editorStore.viewing.summary_start : editorStore.viewing.source_start
-      const end = docType === "summary" ? editorStore.viewing.summary_end : editorStore.viewing.source_end
+      const start = docType === "text1" ? editorStore.viewing.text1_start : editorStore.viewing.text2_start
+      const end = docType === "text1" ? editorStore.viewing.text1_end : editorStore.viewing.text2_end
       return [{
         start,
         end,
@@ -108,17 +108,17 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
             return acc
           }
 
-          if (docType === "summary") {
+          if (docType === "text2") {
             return [...acc, {
-              start: label.summary_start,
-              end: label.summary_end,
+              start: label.text2_start,
+              end: label.text2_end,
               color: generateUserColor(label.user_id, label.record_id),
             }]
           }
 
           return [...acc, {
-            start: label.source_start,
-            end: label.source_end,
+            start: label.text1_start,
+            end: label.text1_end,
             color: generateUserColor(label.user_id, label.record_id),
           }]
         }, [])
@@ -140,7 +140,7 @@ export default function EditorPanel({ docType, type, text, pending, onSelectionC
   })
 
   return (
-    <Window name={labelsStore.titles[docType === "summary" ? 1 : 0]}>
+    <Window name={labelsStore.titles[docType === "text1" ? 0 : 1]}>
       <div className="relative w-full h-full">
         {pending && (
           <div className="flex justify-center items-center absolute inset-0 z-10">

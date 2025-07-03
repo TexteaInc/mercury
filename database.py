@@ -16,12 +16,13 @@ from version import __version__
 class OldLabelData(TypedDict):  # readable by frontend
     record_id: str  # a unit name for the annotation
     sample_id: str  # traditionally, mercury_{\d+} where \d is the sample number, e.g., 15
-    summary_start: int
-    summary_end: int
-    source_start: int
-    source_end: int
+    text1_start: int
+    text1_end: int
+    text2_start: int
+    text2_end: int
     consistent: str  # used to be boolean
-    task_index: int  # traditionally, \d+ where \d is the sample number, e.g., 15
+    # Deprecated
+    example_index: int  # traditionally, \d+ where \d is the sample number, e.g., 15
     user_id: str
     note: str
     username: str
@@ -47,10 +48,10 @@ def convert_LabelData(lb: LabelData | OldLabelData,
         return {
             "annot_id": lb["record_id"],
             # "sample_id": re.search(r"\d+", lb["sample_id"]).group(0),
-            "sample_id": lb["task_index"],
+            "sample_id": lb["example_index"],
             "annot_spans": {
-                "source": (lb["source_start"], lb["source_end"]),
-                "summary": (lb["summary_start"], lb["summary_end"])
+                "text1": (lb["text1_start"], lb["text1_end"]),
+                "text2": (lb["text2_start"], lb["text2_end"])
             },
             "annotator": lb["user_id"],
             "label": lb["consistent"],
@@ -61,12 +62,12 @@ def convert_LabelData(lb: LabelData | OldLabelData,
             "record_id": lb["annot_id"],
             # "sample_id": f"mercury_{lb['sample_id']}",
             "sample_id": f"mercury_{lb['sample_id']}",
-            "summary_start": lb["annot_spans"].get("summary", (-1, -1))[0],
-            "summary_end": lb["annot_spans"].get("summary", (-1, -1))[1],
-            "source_start": lb["annot_spans"].get("source", (-1, -1))[0],
-            "source_end": lb["annot_spans"].get("source", (-1, -1))[1],
+            "text1_start": lb["annot_spans"].get("text1", (-1, -1))[0],
+            "text1_end": lb["annot_spans"].get("text1", (-1, -1))[1],
+            "text2_start": lb["annot_spans"].get("text2", (-1, -1))[0],
+            "text2_end": lb["annot_spans"].get("text2", (-1, -1))[1],
             "consistent": lb["label"],
-            "task_index": lb["sample_id"],
+            "example_index": lb["sample_id"],
             "user_id": lb["annotator"],
             "note": lb["note"],
             "username": username
@@ -80,16 +81,16 @@ class AnnotationLabelItem(TypedDict):
 
 
 class AnnotationItem(TypedDict):
-    source: AnnotationLabelItem
-    summary: AnnotationLabelItem
+    text1: AnnotationLabelItem
+    text2: AnnotationLabelItem
     # This is the same as the LabelData type
     consistent: str
     annotator: str
 
 
 class AnnotationData(TypedDict):
-    source: str
-    summary: str
+    text1: str
+    text2: str
     annotations: List[AnnotationItem]
 
 
@@ -271,8 +272,8 @@ class Database:
         data_for_labeling = [
             {
                 "_id": str(sample_id),
-                "source": " ".join(sectioned_chunks[sample_id]["text_1"].values()),
-                "summary": " ".join(sectioned_chunks[sample_id]["text_2"].values())
+                "text1": " ".join(sectioned_chunks[sample_id]["text_1"].values()),
+                "text2": " ".join(sectioned_chunks[sample_id]["text_2"].values())
             }
             for sample_id in sectioned_chunks
         ]
@@ -357,11 +358,15 @@ class Database:
         configs = self.mercury_db.execute("SELECT key, value FROM config").fetchall()
         return {key: value for key, value in configs}
 
+    def fetch_titles(self):
+        configs = self.fetch_configs()
+        return [configs["text_1_name"], configs["text_2_name"]]
+
     @database_lock()
     def update_annotation(self, label_data: OldLabelData):
         # find the record_id in the database
         sql_cmd = "SELECT annotator FROM annotations WHERE annot_id = ?"
-        res = self.mercury_db.execute(sql_cmd, (label_data["record_id"],))
+        res = self.mercury_db.execute(sql_cmd, (label_data["annot_id"],))
         annotation = res.fetchone()
         if annotation is None:
             return
@@ -374,7 +379,7 @@ class Database:
             json.dumps(label_data["annot_spans"]),
             label_data["label"],
             label_data["note"],
-            label_data["record_id"],
+            label_data["annot_id"],
         ))
         self.mercury_db.commit()
 
@@ -437,7 +442,7 @@ class Database:
 
     @database_lock()
     # def delete_annotation(self, record_id: str, user_id: str):
-    def delete_annotation(self, record_id: str, annotator: str):
+    def delete_annotation(self, annot_id: str, annotator: str):
         # if not (
         #         (self.annotations["record_id"] == record_id)
         #         & (self.annotations["user_id"] == user_id)
@@ -447,7 +452,7 @@ class Database:
         # self.annotations.drop(record_index, inplace=True)
         # self.vectara_client.delete_document(self.annotation_corpus_id, record_id)
         sql_cmd = "DELETE FROM annotations WHERE annot_id = ? AND annotator = ?"
-        self.mercury_db.execute(sql_cmd, (int(record_id), annotator))
+        self.mercury_db.execute(sql_cmd, (int(annot_id), annotator))
         self.mercury_db.commit()
 
     @database_lock()
@@ -490,7 +495,7 @@ class Database:
 
     @database_lock()
     # def export_task_history(self, task_index: int, user_id: str) -> list[LabelData]:
-    def export_task_history(self, sample_id: int) -> list[LabelData]:
+    def export_example_history(self, sample_id: int) -> list[LabelData]:
         # return self.annotations[
         #         (self.annotations["user_id"] == user_id) &
         #         (self.annotations["task_index"] == task_index)
@@ -529,7 +534,7 @@ class Database:
         for annot_id, sample_id, annot_spans, annotator, label, note in annotations:
             # find the source and summary text by doc_id
             full_texts = {}
-            for text_type in ["source", "summary"]:
+            for text_type in ["text1", "text2"]:
                 sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
                 res = self.mercury_db.execute(sql_cmd, (sample_id, text_type))
                 text = res.fetchall()  # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
@@ -549,7 +554,7 @@ class Database:
 
             results.append(result_local)
 
-            results_dict.setdefault(sample_id, {"source": full_texts["source"], "summary": full_texts["summary"],
+            results_dict.setdefault(sample_id, {"text1": full_texts["text1"], "text2": full_texts["text2"],
                                                 "annotations": []})
             results_dict[sample_id]["annotations"].append(result_local)
 
@@ -592,7 +597,7 @@ class Database:
         for annot_id, sample_id, annot_spans, annotator, label, note in annotations:
             # find the source and summary text by doc_id
             full_texts = {}
-            for text_type in ["source", "summary"]:
+            for text_type in ["text1", "text2"]:
                 sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
                 res = self.mercury_db.execute(sql_cmd, (sample_id, text_type))
                 text = res.fetchall()  # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
@@ -611,7 +616,7 @@ class Database:
 
             results.append(result_local)
 
-            results_dict.setdefault(sample_id, {"source": full_texts["source"], "summary": full_texts["summary"],
+            results_dict.setdefault(sample_id, {"text1": full_texts["text1"], "text2": full_texts["text2"],
                                                 "annotations": []})
             results_dict[sample_id]["annotations"].append(result_local)
 
@@ -634,13 +639,13 @@ class Database:
         for sample_id in sample_meta_dict:
             if sample_id not in annotated_sample_ids:
                 full_texts = {}
-                for text_type in ["source", "summary"]:
+                for text_type in ["text1", "text2"]:
                     sql_cmd = "SELECT text FROM chunks WHERE sample_id = ? AND text_type = ? ORDER BY chunk_offset"
                     res = self.mercury_db.execute(sql_cmd, (sample_id, text_type))
                     text = res.fetchall()  # text =  [('The quick brown fox.',), ('Jumps over a lazy dog.',)]
                     text = [t[0] for t in text]
                     full_texts[text_type] = " ".join(text)
-                sample_dict = {"sample_id": sample_id, "source": full_texts["source"], "summary": full_texts["summary"],
+                sample_dict = {"sample_id": sample_id, "text1": full_texts["text1"], "text2": full_texts["text2"],
                                "annotations": []}
                 sample_dict.update(sample_meta_dict[sample_id])
                 new_results_nested.append(sample_dict)

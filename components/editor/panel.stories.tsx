@@ -11,7 +11,7 @@ type Story = StoryObj<typeof EditorPanel>
 
 export const Primary: Story = {
   args: {
-    docType: "summary",
+    docType: "text2",
     type: "editing",
     text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
   },

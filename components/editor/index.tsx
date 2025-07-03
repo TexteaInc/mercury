@@ -182,10 +182,10 @@ export default function Editor() {
     }
 
     const labelRequest: LabelRequest = {
-      text1_start: summarySelection?.start ?? -1,
-      text1_end: summarySelection?.end ?? -1,
-      text2_start: sourceSelection?.start ?? -1,
-      text2_end: sourceSelection?.end ?? -1,
+      text1_start: sourceSelection?.start ?? -1,
+      text1_end: sourceSelection?.end ?? -1,
+      text2_start: summarySelection?.start ?? -1,
+      text2_end: summarySelection?.end ?? -1,
       labels: consistent,
       note,
     }
@@ -276,13 +276,13 @@ export default function Editor() {
     editorStore.setEditing(editorStore.viewing)
     editorStore.setViewing(null)
     sourceRef.current?.setSelection({
-      start: editorStore.viewing.source_start,
-      end: editorStore.viewing.source_end,
+      start: editorStore.viewing.text1_start,
+      end: editorStore.viewing.text1_end,
       text_type: "text1",
     })
     summaryRef.current?.setSelection({
-      start: editorStore.viewing.summary_start,
-      end: editorStore.viewing.summary_end,
+      start: editorStore.viewing.text2_start,
+      end: editorStore.viewing.text2_end,
       text_type: "text2",
     })
   }, [editorStore.viewing])
@@ -293,7 +293,7 @@ export default function Editor() {
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel defaultSize={50}>
             <EditorPanel
-              docType="source"
+              docType="text1"
               type={type}
               text={taskStore.current?.text1 || ""}
               ref={sourceRef}
@@ -304,7 +304,7 @@ export default function Editor() {
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={50}>
             <EditorPanel
-              docType="summary"
+              docType="text2"
               type={type}
               text={taskStore.current?.text2 || ""}
               ref={summaryRef}

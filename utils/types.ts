@@ -26,7 +26,7 @@ export interface SectionResponseSlice {
   score: number
   offset: number
   len: number
-  to_doc: boolean
+  text_type: "text1" | "text2"
 }
 
 export type SectionResponse = SectionResponseSlice[]
@@ -35,16 +35,16 @@ export interface ServerSection {
   score: number
   offset: number
   len: number
-  to_doc: boolean
+  text_type: "text1" | "text2"
   index: number
 }
 
-export function userSectionResponse(start: number, end: number, toDoc: boolean): SectionResponseSlice {
+export function userSectionResponse(start: number, end: number, text_type: "text1" | "text2"): SectionResponseSlice {
   return {
     score: 2,
     offset: start,
     len: end - start,
-    to_doc: toDoc,
+    text_type,
   }
 }
 
@@ -74,12 +74,12 @@ export interface Normal {
 export interface LabelData {
   record_id: number
   sample_id: string
-  summary_start: number
-  summary_end: number
-  source_start: number
-  source_end: number
+  text1_start: number
+  text1_end: number
+  text2_start: number
+  text2_end: number
   consistent: string[]
-  task_index: number
+  example_index: number
   user_id: string
   note: string
   username?: string

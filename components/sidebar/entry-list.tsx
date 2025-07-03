@@ -54,11 +54,11 @@ export default function EntryList() {
       {visible.map((label) => {
         const color = generateUserColor(label.user_id, label.record_id)
         const texts = []
-        const sourceText = label.source_end !== -1 ? taskStore.current?.text1.slice(label.source_start, label.source_end) : ""
+        const sourceText = label.text1_end !== -1 ? taskStore.current?.text1.slice(label.text1_start, label.text1_end) : ""
         if (sourceText) {
           texts.push(`${sourceText.slice(0, Math.min(sourceText.length, 20))}...`)
         }
-        const targetText = label.summary_end !== -1 ? taskStore.current?.text2.slice(label.summary_start, label.summary_end) : ""
+        const targetText = label.text2_end !== -1 ? taskStore.current?.text2.slice(label.text2_start, label.text2_end) : ""
         if (targetText) {
           texts.push(`${targetText.slice(0, Math.min(targetText.length, 20))}...`)
         }

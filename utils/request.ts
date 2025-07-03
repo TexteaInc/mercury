@@ -124,7 +124,7 @@ async function getTaskHistory(access_token: string, taskIndex: number): Promise<
 }
 
 async function deleteLabel(access_token: string, recordId: number): Promise<Normal> {
-  const response = await fetch(`${backend}/record/${recordId}`, {
+  const response = await fetch(`${backend}/annot/${recordId}`, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${access_token}`,
@@ -149,8 +149,8 @@ async function login(email: string, password: string): Promise<string | null> {
   return null
 }
 
-async function patchLabel(access_token: string, taskIndex: number, recordId: number, labelData: LabelRequest): Promise<Normal> {
-  const response = await fetch(`${backend}/sample/${taskIndex}/annot/${recordId}`, {
+async function patchLabel(access_token: string, sampleIndex: number, recordId: number, labelData: LabelRequest): Promise<Normal> {
+  const response = await fetch(`${backend}/sample/${sampleIndex}/annot/${recordId}`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

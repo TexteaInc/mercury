@@ -25,6 +25,8 @@ function Candidate({ candidate, prefix, initialData, onResultChange, disabled = 
         }
       } else if (item === prefix) {
         hasPrefix = true
+      } else {
+        newLabels[item] = true
       }
     })
   }

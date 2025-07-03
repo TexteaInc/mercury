@@ -50,10 +50,10 @@ def serialize_f32(vector: List[float]) -> bytes:
 
 
 class Label(BaseModel):
-    summary_start: int
-    summary_end: int
-    source_start: int
-    source_end: int
+    text1_start: int
+    text1_end: int
+    text2_start: int
+    text2_end: int
     consistent: list[str]
     note: str
 
@@ -126,7 +126,7 @@ def create_access_token(data: dict, secret_key: str, expires_delta: timedelta | 
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=11520)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, secret_key, algorithm="HS256")
     return encoded_jwt
@@ -155,6 +155,9 @@ async def get_labels() -> list:  # get all candidate labels for human annotators
         labels = yaml.safe_load(f)
     return labels
 
+@app.get("/titles")
+async def get_titles() -> list:
+    return database.fetch_titles()
 
 @app.get("/user/me")
 async def get_user(token: Annotated[str, Depends(oauth2_scheme)], config: Config = Depends(get_config)) -> User:
@@ -189,7 +192,6 @@ async def export_user_data(user: Annotated[User, Depends(get_user)]):
     return database.dump_annotator_labels(user.id)
 
 
-
 @app.get("/samples")
 async def get_num_samples():
     return {"num_samples": len(samples)}
@@ -205,7 +207,7 @@ async def get_sample(sample_id: int):
 
 @app.get("/sample/{sample_id}/history")
 async def get_sample_history(sample_id: int, _: Annotated[User, Depends(get_user)]):
-    return database.export_sample_history(sample_id)
+    return database.export_example_history(sample_id)
 
 @app.get("/sample/{sample_id}/complimentary_annotations/{user_id}")
 async def get_other_annotations(sample_id: int, user_id: str):
@@ -265,8 +267,8 @@ async def update_annotation(sample_id: int, annot_id: int, annot: Annotation, us
     })
     return {"message": "success"}
 
-@app.delete("/sample/{sample_id}/annot/{annot_id}")
-async def delete_annotation(sample_id: int, annot_id: int, user: Annotated[User, Depends(get_user)]):
+@app.delete("/annot/{annot_id}")
+async def delete_annotation( annot_id: int, user: Annotated[User, Depends(get_user)]):
     database.delete_annotation(annot_id, user.id)
     return {"message": f"annotation {annot_id} deleted"}
 
@@ -290,7 +292,7 @@ async def search(sample_id: int, selection: Selection):
 
     # Then get the chunk_id's from the opposite document
     # sql_cmd = "SELECT chunk_id, text FROM chunks WHERE text_type = ? AND sample_id = ?"
-    opposite_text_type = {"text1": "text2", "text2": "text1"}[selection.text_type]
+    opposite_text_type = {"text1": "text_2", "text2": "text_1"}[selection.text_type]
 
     # chunk_id_and_text = database.mercury_db.execute(sql_cmd, [text_type, task_index]).fetchall()
     # search_chunk_ids = [row[0] for row in chunk_id_and_text]
@@ -317,9 +319,9 @@ async def search(sample_id: int, selection: Selection):
     #           "AND embedding MATCH '{1}'  \
     #           ORDER BY distance \
     #           LIMIT 5;".format(', '.join(vecter_db_row_ids), embedding)
-    sql_cmd = f"SELECT chunk_id, distance FROM chunks WHERE k =5 AND sample_id = {sample_index} AND text_type = '{opposite_text_type}' AND embedding MATCH '{embedding}' ORDER BY distance"
+    sql_cmd = f"SELECT chunk_id, distance FROM chunks WHERE k = 5 AND sample_id = {sample_id} AND text_type = '{opposite_text_type}' AND embedding MATCH '{embedding}' ORDER BY distance"
     # TODO: Please allow users to select k value via a sliding bar
-    # print ("SQL_CMD", sql_cmd)
+    print ("SQL_CMD", sql_cmd)
 
     # vector_search_result = database.db.execute(sql_cmd, [*search_chunk_ids, serialize_f32(embedding)]).fetchall()
     vector_search_result = database.mercury_db.execute(sql_cmd).fetchall()
@@ -339,6 +341,7 @@ async def search(sample_id: int, selection: Selection):
     # and append to a list of selections
     selections = []
     for i in response:
+        print(selection)
         score = chunk_id_to_score[i[0]]
         offset = i[2]
         text = i[1]
@@ -347,7 +350,7 @@ async def search(sample_id: int, selection: Selection):
                 "score": 1 - score,  # semantic similarity is 1 - distance
                 "offset": offset,
                 "len": len(text),
-                "to_doc": selection.from_summary,
+                "text_type": {"text1": "text2", "text2": "text1"}[selection.text_type],
             }
         )
 
@@ -424,7 +427,7 @@ async def patch_comments(annot_index: int, comment_id: int, comment: CommentData
 
 @app.get("/annots")
 async def get_annotations():
-    return database.dump_annotations(dump_file=None)
+    return database.dump_annotation(dump_file=None)
 
 
 @app.get("/history")  # redirect route to history.html
